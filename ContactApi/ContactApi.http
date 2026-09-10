@@ -1,0 +1,9 @@
+@baseUrl = http://localhost:5014
+
+### Get Root URL
+GET {{baseUrl}}/
+Accept: application/json
+
+### Get Non Existant URL
+GET {{baseUrl}}/doesnotexist
+Accept: application/json
