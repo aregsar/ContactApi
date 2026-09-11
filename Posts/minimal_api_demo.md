@@ -47,10 +47,10 @@ dotnet sln ContactApi.slnx add ContactApi/ContactApi.csproj
 Display the solution directory structure:
 
 ```bash
-tree -L n 3
+tree -L 3
 ```
 
-Here is what the directory structure will look like:
+Here is what the directory structure will look like (excluding the obj and bin directories):
 
 ```bash
 ├── ContactApi.slnx
