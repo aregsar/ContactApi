@@ -25,25 +25,18 @@ namespace Microsoft.Extensions.Hosting
 {
     public static class HostingHostBuilderExtensions
     {
-        // This is the underlying internal method that registers the defaults
         internal static ILoggingBuilder AddDefaultLoggingProviders(this ILoggingBuilder builder, HostBuilderContext context)
         {
-            // 1. Adds the configuration section mapping (binds Logging configuration)
             builder.AddConfiguration(context.Configuration.GetSection("Logging"));
 
-            // 2. Registers the built-in Console logger
             builder.AddConsole();
 
-            // 3. Registers the cross-platform Debug logger
             builder.AddDebug();
 
-            // 4. Registers cross-platform Event Source logging
             builder.AddEventSourceLogger();
 
-            // 5. Conditionally registers Windows EventLog if running on a Windows OS
             if (OperatingSystem.IsWindows())
             {
-                // Binds safely to the Windows Event Log
                 builder.AddEventLog();
             }
 
@@ -142,10 +135,14 @@ Accept: application/json
 dotnet run --project ContactLoggingProviders/ContactLoggingProviders.csproj --launch-profile http
 ```
 
-Send Request
+You will see log output in console
+
+Send Request to root URL to verify its running
 
 ```bash
 dotnet run --project ContactLoggingProviders/ContactLoggingProviders.csproj --launch-profile http.prod
 ```
 
-Send Request
+You will not see log output in console since all the logging providers were cleared and the console logger was not added for Production environment.
+
+Send Request to root URL to verify its running
