@@ -12,14 +12,14 @@ The post uses the dotnet cli and assumes you have .NET 10 framework installed.
 
 ### Creating the project solution
 
-Create the solution for the project and go to its directory:
+Create a solution to host the project and enter the solution directory that is created:
 
 ```bash
 dotnet new sln -n ContactApi -o ContactApi
 cd ContactApi
 ```
 
-> All following dotnet cli commands will be executed from the root directory of the solution
+> All following dotnet cli commands will be executed from the root directory of the solution.
 
 Optionally add a .gitignore and README.md file to the solution:
 
@@ -79,7 +79,7 @@ ContactApi.slnx:
 </Solution>
 ```
 
-Explore the project file ContactApi.csproj:
+Inspect the project file ContactApi.csproj:
 
 ```bash
 cat ContactApi/ContactApi.csproj
@@ -121,9 +121,9 @@ appsettings.json:
 }
 ```
 
-The default log level setting sets the default LogLevel for all ILogger.log calls to `Information`.
+The default `Logging:LogLevel` setting sets the default LogLevel for all logger logging calls to `Information`.
 
-The Microsoft.AspNetCore setting overrides this default level to `Warning` for classes in the `Microsoft.AspNetCore` namespace.
+The `Microsoft.AspNetCore` setting overrides this default level to `Warning` for logging calls in classes from the `Microsoft.AspNetCore` namespace.
 
 We can add additional overrides of our own for other namespaces.
 
@@ -184,10 +184,6 @@ Then the application maps a single endpoint that returns `Hello World` to the ro
 Finally the call to `app.Run()` runs the application.
 
 ### Exploring the application launch settings
-
-When the application is run it uses the configuration in the `properties/launchSettings.json` file to run the Kestrel application server with the host, port and scheme set to applicationUrl setting.
-
-The environment that the application runs in is set to the ASPNETCORE_ENVIRONMENT setting value.
 
 Explore the properties/launchSettings.json file:
 
@@ -250,7 +246,7 @@ Run the project by explicitly specifying the http profile as the launch profile:
 dotnet run --project ContactApi/ContactApi.csproj --launch-profile http
 ```
 
-Both previous runs run the application using the same http profile.
+Both previous run commands run the application using the http profile.
 
 Now run the project by specifying the https profile as the launch profile:
 
@@ -258,9 +254,15 @@ Now run the project by specifying the https profile as the launch profile:
 dotnet run --project ContactApi/ContactApi.csproj --launch-profile https
 ```
 
-Note that the `https` profile actually runs the Kestrel server using both the http and https schemes.
+> Note that the `https` profile actually runs the Kestrel server using both the http and https schemes as specified in the applicationUrl setting.
 
-> If you run the https profile, you will be prompted to install a self signed certificate the first time you run it. To install the certificate you need to run: dotnet cert install
+The first time you run the https profile, you will be prompted to install a self signed certificate.
+
+To install the certificate you need to run:
+
+```bash
+dotnet dev-certs https --trust
+```
 
 ### Adding a Production profile to launchsettings
 
@@ -330,7 +332,7 @@ info: Microsoft.Hosting.Lifetime[0]
 
 One way we can send requests to our running Miniaml API application is to use .http files.
 
-.http files are files with the .http extension that contain http request scripts that can send requests to specified endpoints.
+These .http files are files with the .http extension that contain http request scripts that can send requests to specified endpoints.
 
 VSCode has support for them using the VSCode HTTP Client extension.
 
@@ -338,9 +340,9 @@ All major IDEs and Editors have either native support for them or support them t
 
 Using this support you can easily send requests by clicking on links in the document.
 
-As a bonus these .http documents can be checked in source control.
+As a bonus these .http documents can be checked into source control.
 
-Add a ContactApi.http to the ContactApi project root.
+Add a `ContactApi.http` to the `ContactApi` project root.
 
 In the root directory of the solution type:
 
@@ -366,13 +368,13 @@ This file has two http get requests specified.
 
 The first is a request to the root `/` URL that is mapped in Program.cs.
 
-The second is a request to a dummy `/notfound` URL that is not configured in our project.
+The second is a request to a dummy `/doesnotexist` URL that is not mapped in our project.
 
 A `@baseUrl` variable is defined that is used in both requests.
 
 The lines that start with `###` are comment lines and are used as separators between requests.
 
-The `@baseUrl` variable is set the to the applicationUrl value from the `http` and `http.prod` profiles of the `properties/launchsettings.json` file.
+The `@baseUrl` variable is set the to the common applicationUrl value from the `http` and `http.prod` profiles of the `properties/launchsettings.json` file.
 
 When we run the project with the `http` or `http.prod` profile the server will respond to the requests from the .http file.
 
