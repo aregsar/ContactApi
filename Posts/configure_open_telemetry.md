@@ -23,10 +23,18 @@ touch ContactOpenTelemetry/BuilderExtensions.cs
 BuilderExtensions.cs
 
 ```cs
+using Microsoft.Extensions.Logging;
+using OpenTelemetry;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
+
 namespace Microsoft.Extensions.Hosting;
 
 public static class BuilderExtensions
 {
+    public const string CustomSourceName = "MyCustomActivitySource";
+    public static readonly ActivitySource MyActivitySource = new(CustomSource);
+
     public static TBuilder AddOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         builder.Logging.AddOpenTelemetry();
@@ -36,8 +44,12 @@ public static class BuilderExtensions
                         {
                             tracing.AddSource(builder.Environment.ApplicationName)
                                 .AddAspNetCoreInstrumentation()
+                                // Capture EF Core database commands, queries, and execution paths
+                                //.AddSource("Microsoft.EntityFrameworkCore.Database.Command")
+                                 .AddSource("Microsoft.EntityFrameworkCore.*")
                                 // dotnet package add OpenTelemetry.Instrumentation.GrpcNetClient --project ContactOpenTelemetry/ContactOpenTelemetry.csproj)
                                 //.AddGrpcClientInstrumentation()
+                                .AddSource(CustomSourceName)
                                 .AddHttpClientInstrumentation();
                         });
 
@@ -47,6 +59,7 @@ public static class BuilderExtensions
                         {
                             metrics.AddAspNetCoreInstrumentation()
                                 .AddHttpClientInstrumentation()
+                                .AddMeter("Microsoft.EntityFrameworkCore")
                                 .AddRuntimeInstrumentation();
                         });
 
@@ -72,6 +85,12 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
+app.MapGet("/trace",() => {
+    using Activity? activity = BuilderExtensions.MyActivitySource.StartActivity("ProcessOrderEndpoint");
+    activity?.SetTag("id", 1);
+    activity?.SetStatus(ActivityStatusCode.Error, "User not found");
+});
+
 app.Run();
 ```
 
@@ -82,7 +101,11 @@ appsettings.json
   "Logging": {
     "LogLevel": {
       "Default": "Information",
-       "Microsoft.AspNetCore": "Warning"
+       "Microsoft.AspNetCore": "Warning",
+       "Microsoft.EntityFrameworkCore": "Information",
+       "Microsoft.EntityFrameworkCore.Database.Command": "Information",
+       "Microsoft.EntityFrameworkCore.Database.Connection": "Information",
+       "Microsoft.EntityFrameworkCore.Database.Transaction": "Information"
     },
     "OpenTelemetry": {
       "IncludeScopes": true,
