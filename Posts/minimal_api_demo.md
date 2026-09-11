@@ -264,7 +264,7 @@ To install the certificate you need to run:
 dotnet dev-certs https --trust
 ```
 
-### Adding a Production profile to launchsettings
+### Adding a Production profile to the launchsettings file
 
 Lets add a third launch profile to launchsettings.json that sets the environment to Production.
 
@@ -330,7 +330,7 @@ info: Microsoft.Hosting.Lifetime[0]
 
 ### Sending requests to the api using .http files
 
-One way we can send requests to our running Miniaml API application is to use .http files.
+One way we can send requests to our running Minimal API application is to use .http files.
 
 These .http files are files with the .http extension that contain http request scripts that can send requests to specified endpoints.
 
@@ -401,7 +401,7 @@ Transfer-Encoding: chunked
 Hello World!
 ```
 
-The response to the GET `/notfound` request is:
+The response to the GET `/doesnotexist` request is:
 
 ```http
 HTTP/1.1 404 Not Found
