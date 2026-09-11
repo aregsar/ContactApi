@@ -1,12 +1,16 @@
-## Creating a minimal Minimal API project
+## Creating a minimal Minimal API project boilerplate
 
-In this post we will create a minimal api project template with a single endpoint mapped to the root URL.
+In this post we will create the most basic Minimal API project that has a single endpoint mapped to the root URL of the API.
 
-We will inspect the files for the project then run the project and inspect the response to our http requests.
+In future posts we will use this minimal boilerplate to cover individual features of the Minimal API framework and the ASP.NET request pipeline.
 
-In future posts we will use this minimal template to cover individual features of the asp.net and minimal api request pipeline and web applications.
+To understand how a Minimal API project works, we will inspect the project files and how to configure application settings and run the project.
+
+We will then run the project and inspect the response to http requests.
 
 The post uses the dotnet cli and assumes you have .NET 10 framework installed.
+
+### Creating the project solution
 
 Create the solution for the project and go to its directory:
 
@@ -17,12 +21,14 @@ cd ContactApi
 
 > All following dotnet cli commands will be executed from the root directory of the solution
 
-Optinally add a .gitignore and README.md file:
+Optionally add a .gitignore and README.md file to the solution:
 
 ```bash
 dotnet new gitignore
 echo "# ContactApi" >> README.md
 ```
+
+### Creating and adding the project to the solution
 
 Create the Minimal API project:
 
@@ -30,7 +36,21 @@ Create the Minimal API project:
 dotnet new web -o ContactApi
 ```
 
-Explore the solution directory structure:
+Add the project to the solution:
+
+```bash
+dotnet sln ContactApi.slnx add ContactApi/ContactApi.csproj
+```
+
+### Exploring the solution and project files and directory structure
+
+Display the solution directory structure:
+
+```bash
+tree -L n 3
+```
+
+Here is what the directory structure will look like:
 
 ```bash
 ├── ContactApi.slnx
@@ -43,12 +63,6 @@ Explore the solution directory structure:
        ├── Program.cs
        ├── Properties
             └── launchSettings.json
-```
-
-Add the project to the solution:
-
-```bash
-dotnet sln ContactApi.slnx add ContactApi/ContactApi.csproj
 ```
 
 Inspect the ContactApi.slnx solution file:
@@ -85,6 +99,8 @@ ContactApi.csproj:
 </Project>
 ```
 
+### Exploring the Minimal API application settings
+
 Explore the appsettings.json configuration file:
 
 ```bash
@@ -105,13 +121,15 @@ appsettings.json:
 }
 ```
 
-The default log level setting sets the default LogLevel for all ILogger.log calls to Information.
+The default log level setting sets the default LogLevel for all ILogger.log calls to `Information`.
 
-The Microsoft.AspNetCore setting overrides the LogLevel of the ILogger.log calls for classes in the Microsoft.AspNetCore namespace to Warning.
+The Microsoft.AspNetCore setting overrides this default level to `Warning` for classes in the `Microsoft.AspNetCore` namespace.
 
-We can add additional overrides for other namespaces.
+We can add additional overrides of our own for other namespaces.
 
 Namespaces down a level in the namespace hierarchy will override the parent namespace setting.
+
+So for example if we had the settings `"Microsoft": "Information"` and `"Microsoft.AspNetCore": "Warning"`, then the log level of logs from `Microsoft` namespace would be `Information` while the log level of logs from `Microsoft.AspNetCore` namespace would be `Warning`.
 
 Explore appsettings.development.json:
 
@@ -132,8 +150,11 @@ appsettings.development.json:
 }
 ```
 
-The settings in appsettings.development.json override settings in appsettings.json when the applcation runs in a develelopment environment.
-In this case the LogLevel settings are the same in both files.
+When the application runs in a development environment, the settings in appsettings.development.json will override settings in the default appsettings.json file.
+
+In this case since the LogLevel settings are the same in both files, the override does not change any values.
+
+### Looking at the Minimal API Program.cs entry point
 
 Explore the minimal api code in the Program.cs file:
 
@@ -152,13 +173,21 @@ app.MapGet("/", () => "Hello World!");
 app.Run();
 ```
 
-The code creates a application builder, does not configure any services and creates the application using the builder.
+This is the bare minimum code you need to run a Minimal Api project.
 
-Then the application maps the single root endpoint and then runs the application.
+The code creates a web application builder and does not configure any services using the builder.
 
-This is the bare minimum code you need to run a Minimal Api project
+Then is calls `builder.Build()` to create the web application.
 
-When the application is run it uses the configuration in the properties/launchSettings.json file to set the server URL and the environment the application is run in.
+Then the application maps a single endpoint that returns `Hello World` to the root `/` URL.
+
+Finally the call to `app.Run()` runs the application.
+
+### Exploring the application launch settings
+
+When the application is run it uses the configuration in the `properties/launchSettings.json` file to run the Kestrel application server with the host, port and scheme set to applicationUrl setting.
+
+The environment that the application runs in is set to the ASPNETCORE_ENVIRONMENT setting value.
 
 Explore the properties/launchSettings.json file:
 
@@ -194,9 +223,18 @@ ContactApi/Properties/launchSettings.json:
 }
 ```
 
-There are two profiles in this file. The first is the http profile and when we run the project without specifying the profile, this first profile is selected by default.
+There are two profiles in this file.
 
-We can be explicit and specify the profile we want to run by adding it as a flag when we run the project.
+When the application is run, the run command selects one of the profiles in
+the `properties/launchSettings.json` file to configure host environment settings and run the application.
+
+The applicationUrl setting of the selected profile is used to run the Kestrel application server with the host, port and scheme of the setting.
+
+The environment that the application runs in is set to the ASPNETCORE_ENVIRONMENT setting value of the selected profile.
+
+The first profile in the `properties/launchSettings.json` file is the http profile.
+
+When we run the project without specifying the profile, the first profile is selected by default.
 
 Run the project using the default (http) profile:
 
@@ -204,23 +242,27 @@ Run the project using the default (http) profile:
 dotnet run --project ContactApi/ContactApi.csproj
 ```
 
+We can be explicit and specify the profile we want to run by adding it as a flag when we run the project.
+
 Run the project by explicitly specifying the http profile as the launch profile:
 
 ```bash
 dotnet run --project ContactApi/ContactApi.csproj --launch-profile http
 ```
 
-Both previous runs launch using the same http profile.
+Both previous runs run the application using the same http profile.
 
-Run the project by specifying the https profile as the launch profile:
-
-Run the project by specifying the https profile as the launch profile:
+Now run the project by specifying the https profile as the launch profile:
 
 ```bash
 dotnet run --project ContactApi/ContactApi.csproj --launch-profile https
 ```
 
-> If you run the https profile, you will be prompted to install a self signed certificate. To install the certificate you need to run: dotnet cert install
+Note that the `https` profile actually runs the Kestrel server using both the http and https schemes.
+
+> If you run the https profile, you will be prompted to install a self signed certificate the first time you run it. To install the certificate you need to run: dotnet cert install
+
+### Adding a Production profile to launchsettings
 
 Lets add a third launch profile to launchsettings.json that sets the environment to Production.
 
@@ -261,7 +303,7 @@ Lets add a third launch profile to launchsettings.json that sets the environment
 
 This new profile is named http.prod and we set its ASPNETCORE_ENVIRONMENT setting to Production.
 
-We can use this new profile to launch the project to test application behaviour in Production environment.
+We can use this new profile to launch the project to test application behavior in a Production environment.
 
 Launch the project using the Production profile:
 
@@ -284,7 +326,21 @@ info: Microsoft.Hosting.Lifetime[0]
       Content root path: /Users/aregsarkissian/RiderProjects/ContactApi/ContactApi
 ```
 
-### Adding a .http file
+### Sending requests to the api using .http files
+
+One way we can send requests to our running Miniaml API application is to use .http files.
+
+.http files are files with the .http extension that contain http request scripts that can send requests to specified endpoints.
+
+VSCode has support for them using the VSCode HTTP Client extension.
+
+All major IDEs and Editors have either native support for them or support them through plugins.
+
+Using this support you can easily send requests by clicking on links in the document.
+
+As a bonus these .http documents can be checked in source control.
+
+Add a ContactApi.http to the ContactApi project root.
 
 In the root directory of the solution type:
 
@@ -292,9 +348,7 @@ In the root directory of the solution type:
 touch ContactApi/ContactApi.http
 ```
 
-> In VSCode you need to have the VSCode HTTP Client extension installed to be able to send the requests from within the .http file
-
-Add the following content to the file:
+Add the following content to the .http file:
 
 ```http
 @baseUrl = http://localhost:5014
@@ -310,17 +364,17 @@ Accept: application/json
 
 This file has two http get requests specified.
 
-The first is a request to the root `/` URL that is mapped in Program.cs and returns "Hello World!".
+The first is a request to the root `/` URL that is mapped in Program.cs.
 
-The second is a request to a `/notfound` URL that is not configured in our project.
+The second is a request to a dummy `/notfound` URL that is not configured in our project.
 
 A `@baseUrl` variable is defined that is used in both requests.
 
 The lines that start with `###` are comment lines and are used as separators between requests.
 
-The `@baseUrl` is set the to the applicationUrl value from the `http` and `http.prod` profiles of our `properties/launchsettings.json` file.
+The `@baseUrl` variable is set the to the applicationUrl value from the `http` and `http.prod` profiles of the `properties/launchsettings.json` file.
 
-So when we run the project with the `http` or `http.prod` profile the server should respond to the requests in the .http file.
+When we run the project with the `http` or `http.prod` profile the server will respond to the requests from the .http file.
 
 Lets try it.
 
@@ -355,9 +409,11 @@ Date: Thu, 10 Sep 2026 20:56:32 GMT
 Server: Kestrel
 ```
 
-We can also use the Curl cli to make the same requests to our api.
+### Using CURL to make requests
 
-Open another terminal tab and run the curl command to see the same responses:
+We can also use the CURL cli to make the same requests to our api.
+
+Open another terminal tab and run the curl command to see the same responses as before:
 
 ```bash
 curl -i -H "Connection: close" http://localhost:5014/
@@ -392,7 +448,13 @@ Server: Kestrel
 
 > Note that with Curl we need to explicitly send the Connection: close header for the Kestrel server to close the connection using. This is something that the VSCode HTTP Client extension takes care of automatically when we use the .http file to make the request. The HTTP Client extension automatically injects the Connection: close header into the request which is why we get the Connection: close header back in the response.
 
-### Bonus -  Remove the Kestrel server header from responses in Production mode
+### Removing the Kestrel server header from Production responses
+
+As a bonus, we can remove the `Server: Kestrel` header from the response returned by ASP.NET in production.
+
+Update the Program.cs file with the following:
+
+Program.cs
 
 ```cs
 var builder = WebApplication.CreateBuilder(args);
@@ -413,15 +475,17 @@ app.MapGet("/", () => "Hello World!");
 app.Run();
 ```
 
+We added a code section right after the builder is created that configures the ASP.NET pipeline.
+
+The code configures the pipeline to exclude the Kestrel server header, but only when not running in development.
+
 Run the app in Production environment:
 
 ```bash
 dotnet run --project ContactApi/ContactApi.csproj --launch-profile http.prod
 ```
 
-Send the same requests and check the responses.
-
-You shouln't see the Server: Kestrel response header.
+Send the request to the root URL and check the response:
 
 ```http
 HTTP/1.1 200 OK
@@ -433,13 +497,19 @@ Transfer-Encoding: chunked
 Hello World!
 ```
 
-Run the app in Development environment:
+You should see that the `Server: Kestrel` response header was removed from the response.
+
+Same should apply when you send the request to the `/doesnotexist` URL
+
+Now Run the app in Development environment:
 
 ```bash
 dotnet run --project ContactApi/ContactApi.csproj
 ```
 
 Send the same requests and check the responses.
+
+Here is the response to the root URL:
 
 ```http
 HTTP/1.1 200 OK
@@ -456,10 +526,8 @@ You should see the Server: Kestrel header reappear in the response.
 
 ## Conclusion
 
-We saw how to create a modern .NET solution (.slnx file) and add the bare minimum of Mininal API project to the solution.
+We saw how to create a modern .NET solution (.slnx file) and add the bare minimum of Minimal API project to the solution.
 
-Then we explored the files and directories in the project and how they work.
+Then we explored the files and directories in the project and solution and how they work.
 
-Finally we explores how to launch the project, send http requests to the API and view the response.
-
-We saw that we  get a 404 not found response when an endpoint is not mapped for a requested URL.
+Finally we explored how to launch the project, send http requests to the API and view the response.
