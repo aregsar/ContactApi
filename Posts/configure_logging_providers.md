@@ -1,5 +1,11 @@
 ## Configure Logging Providers
 
+In this post we will override the default logging providers to create our own efficient logging configuration.
+
+We will be removing all providers for production since we will be using OpenTelemetry logging described in a followup post.
+
+We only add the console and debug loggers when in development.
+
 ### Create the project boilerplate
 
 Use the project boilerplate from Creating a minimal Minimal API project boilerplate post
@@ -12,13 +18,9 @@ dotnet sln ContactApi.slnx add ContactLoggingProviders/ContactLoggingProviders.c
 
 > All following commands will be run from the solution root directory
 
-### Add builder Extension File
+### The default logging provider configuration
 
-```bash
-touch ContactLoggingProviders/BuilderExtensions.cs
-```
-
-The framework default configuration when WebApplication.CreateBuilder() is called.
+The framework default configuration when WebApplication.CreateBuilder() is called calls AddDefaultLoggingProviders() that adds default logging providers.
 
 ```cs
 namespace Microsoft.Extensions.Hosting
@@ -46,7 +48,15 @@ namespace Microsoft.Extensions.Hosting
 }
 ```
 
-Override the default configuration
+### Override the default configuration
+
+Add builder Extension File
+
+```bash
+touch ContactLoggingProviders/BuilderExtensions.cs
+```
+
+BuilderExtensions.cs
 
 ```cs
 namespace Microsoft.Extensions.Hosting;
