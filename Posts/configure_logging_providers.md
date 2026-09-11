@@ -131,7 +131,7 @@ touch ContactLoggingProviders/ContactApi.http
 Add the following content to the .http file:
 
 ```http
-@baseUrl = http://localhost:5014
+@baseUrl = http://localhost:5094
 
 ### Get Root URL
 GET {{baseUrl}}/
@@ -139,13 +139,13 @@ Accept: application/json
 ```
 
 ```bash
-dotnet run --project ContactLoggingProviders.csproj --launch-profile http.prod
+dotnet run --project ContactLoggingProviders/ContactLoggingProviders.csproj --launch-profile http
 ```
 
 Send Request
 
 ```bash
-dotnet run --project ContactLoggingProviders.csproj --launch-profile http
+dotnet run --project ContactLoggingProviders/ContactLoggingProviders.csproj --launch-profile http.prod
 ```
 
 Send Request

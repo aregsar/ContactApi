@@ -1,4 +1,4 @@
-@baseUrl = http://localhost:5014
+@baseUrl = http://localhost:5094
 
 ### Get Root URL
 GET {{baseUrl}}/
