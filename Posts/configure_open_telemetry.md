@@ -12,6 +12,18 @@ dotnet sln ContactApi.slnx add ContactOpenTelemetry/ContactOpenTelemetry.csproj
 
 > All following commands will be run from the solution root directory
 
+### Add Required Packages
+
+```bash
+dotnet package add OpenTelemetry.Extensions.Hosting --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+dotnet package add OpenTelemetry.Instrumentation.AspNetCore --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+dotnet package add OpenTelemetry.Instrumentation.Http --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+dotnet package add OpenTelemetry.Instrumentation.Runtime --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+dotnet package add OpenTelemetry.Exporter.OpenTelemetryProtocol --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+dotnet package add OpenTelemetry.Instrumentation.EntityFrameworkCore --prerelease --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+dotnet package add OpenTelemetry.Instrumentation.GrpcNetClient --prerelease --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+```
+
 ### Add builder Extension File
 
 Add builder Extension File
@@ -23,17 +35,18 @@ touch ContactOpenTelemetry/BuilderExtensions.cs
 BuilderExtensions.cs
 
 ```cs
-using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.Hosting;
 
+
 public static class BuilderExtensions
 {
     public const string CustomSourceName = "MyCustomActivitySource";
-    public static readonly ActivitySource MyActivitySource = new(CustomSource);
+    public static readonly ActivitySource MyActivitySource = new(CustomSourceName);
 
     public static TBuilder AddOpenTelemetry<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
@@ -42,25 +55,21 @@ public static class BuilderExtensions
         builder.Services.AddOpenTelemetry()
                         .WithTracing(tracing =>
                         {
-                            tracing.AddSource(builder.Environment.ApplicationName)
-                                .AddAspNetCoreInstrumentation()
-                                // Capture EF Core database commands, queries, and execution paths
-                                //.AddSource("Microsoft.EntityFrameworkCore.Database.Command")
-                                 .AddSource("Microsoft.EntityFrameworkCore.*")
-                                // dotnet package add OpenTelemetry.Instrumentation.GrpcNetClient --project ContactOpenTelemetry/ContactOpenTelemetry.csproj)
-                                //.AddGrpcClientInstrumentation()
-                                .AddSource(CustomSourceName)
-                                .AddHttpClientInstrumentation();
+                            tracing.AddSource(CustomSourceName)
+                                    .AddAspNetCoreInstrumentation()
+                                    .AddEntityFrameworkCoreInstrumentation()
+                                    .AddGrpcClientInstrumentation()
+                                    .AddHttpClientInstrumentation();
                         });
 
 
         builder.Services.AddOpenTelemetry()
                         .WithMetrics(metrics =>
                         {
-                            metrics.AddAspNetCoreInstrumentation()
-                                .AddHttpClientInstrumentation()
-                                .AddMeter("Microsoft.EntityFrameworkCore")
-                                .AddRuntimeInstrumentation();
+                            metrics.AddMeter("Microsoft.EntityFrameworkCore")
+                                    .AddAspNetCoreInstrumentation()
+                                    .AddHttpClientInstrumentation()
+                                    .AddRuntimeInstrumentation();
                         });
 
 
@@ -79,13 +88,16 @@ public static class BuilderExtensions
 Program.cs
 
 ```cs
+using System.Diagnostics;
+
 var builder = WebApplication.CreateBuilder(args);
 builder.AddOpenTelemetry();
 var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/trace",() => {
+app.MapGet("/trace", () =>
+{
     using Activity? activity = BuilderExtensions.MyActivitySource.StartActivity("ProcessOrderEndpoint");
     activity?.SetTag("id", 1);
     activity?.SetStatus(ActivityStatusCode.Error, "User not found");
@@ -102,7 +114,7 @@ appsettings.json
     "LogLevel": {
       "Default": "Information",
        "Microsoft.AspNetCore": "Warning",
-       "Microsoft.EntityFrameworkCore": "Information",
+       "Microsoft.EntityFrameworkCore": "Warning",
        "Microsoft.EntityFrameworkCore.Database.Command": "Information",
        "Microsoft.EntityFrameworkCore.Database.Connection": "Information",
        "Microsoft.EntityFrameworkCore.Database.Transaction": "Information"
@@ -121,18 +133,24 @@ appsettings.json
 ```
 
 ```bash
-touch ContactLoggingProviders/ContactApi.http
+touch ContactOpenTelemetry/ContactApi.http
 ```
 
 Add the following content to the .http file:
 
 ```http
-@baseUrl = http://localhost:5094
+@baseUrl = http://localhost:5042
 
 ### Get Root URL
 GET {{baseUrl}}/
 Accept: application/json
+
+### Get Trace URL
+GET {{baseUrl}}/trace
+Accept: application/json
 ```
+
+Run the project:
 
 ```bash
 dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj --launch-profile http

@@ -22,3 +22,16 @@ dotnet new web -o ContactHealthChecks
 dotnet new web -o ContactHttpClientConfig
 
 ```
+
+```cs
+builder.Services.AddDbContext<MyDbContext>(options =>
+     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
+    .options.EnableDetailedErrors();
+
+    if (builder.Environment.IsDevelopment())
+    {
+        //Show query parameter values
+        options.EnableSensitiveDataLogging();
+    }
+);
+```
