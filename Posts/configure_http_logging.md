@@ -45,33 +45,86 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddRedaction();
-// Connect compliance rules specifically to the HTTP Logging Middleware
-builder.Services.AddHttpLoggingRedaction(options =>
-{
-    // Target specific headers, parameters, or pathways to scrub
-});
+/////////////////////////////////////////////////////
+// Http Logging
+// Register core server logging middleware
+builder.Services.AddHttpLogging(options => { });
 
-builder.Services.AddHttpLogging();
+// Register and configure redaction for that middleware
+builder.Services.AddHttpLoggingRedaction(options => {
+    // Redaction configuration goes here
+});
+/////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+// HttpClient Logging
+//TODO: load settings from config
 builder.Services.AddExtendedHttpClientLogging();
+builder.Services.AddRedaction();
+///////////////////////////////////////////////////
 
-builder.Services.AddApplicationLogEnricher(options =>
-{
-    // Adds Host, Environment, etc.like Environment.CurrentManagedThreadId and Environment.MachineName
-    options.InitializeServiceLogState = true;
-});
 
-builder.Services.AddLogEnricher<CustomLogEnricher>();
-builder.Services.AddHttpLogEnricher<CustomHttpLogEnricher>();
-builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
 
-builder.Services.AddHttpLoggingInterceptor<CustomHttpLoggingInterceptor>();
+///////////////////////////////////////
+//ENRICHING
+//
+// 1. Turn on the enrichment subsystem (required for all enrichers)
+//dotnet package add Microsoft.Extensions.Telemetry --project xxxxx
+builder.Logging.EnableEnrichment();
+
+// 2. Load from configuration AND apply code overrides
+builder.Services.AddApplicationLogEnricher(builder.Configuration.GetSection("ApplicationLogEnricherOptions"))
+                .Configure<Microsoft.Extensions.Telemetry.Logging.ApplicationLogEnricherOptions>(options =>
+                {
+                    // This explicitly overrides whatever was in the appsettings JSON file
+                    options.ApplicationName = Environment.GetEnvironmentVariable("OTEL_SERVICE_NAME") ?? builder.Environment.ApplicationName;
+
+                    // Adds Host, Environment, etc.like Environment.CurrentManagedThreadId and Environment.MachineName
+                    options.InitializeServiceLogState = true;
+
+                    if (!string.IsNullOrEmpty(otelServiceVersion))
+                    {
+                        // Tells the enricher to include version metadata
+                        options.ServiceVersion = true;
+
+                        // Sets the exact version string to match your OTel environment variable
+                        // (Note: depending on the library version, this may map to AmbientMetadata or an environment lookup)
+                        Environment.SetEnvironmentVariable("APPLICATION_BUILD_VERSION", Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION"));
+                    }
+                });
+///////////////////////////////////////
+
+//builder.Services.AddLogEnricher<CustomLogEnricher>();
+//builder.Services.AddHttpLogEnricher<CustomHttpLogEnricher>();
+//builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
+//builder.Services.AddHttpLoggingInterceptor<CustomHttpLoggingInterceptor>();
+
 
 
 
 var app = builder.Build();
 
+app.UseHttpLogging();
+
 app.MapGet("/", () => "Hello World!");
 
 app.Run();
+```
+
+```json
+{
+  "AmbientMetadata": {
+    "Application": {
+      "ApplicationName": "PaymentService",
+      "BuildVersion": "2.4.1",
+      "DeploymentRing": "canary"
+    }
+  },
+  "ApplicationLogEnricherOptions": {
+    "BuildVersion": true,
+    "DeploymentRing": true
+  }
+}
+
 ```
