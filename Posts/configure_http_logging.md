@@ -31,6 +31,139 @@ dotnet package add Microsoft.Extensions.Compliance.Redaction
 cat ContactApi/Program.cs
 ```
 
+### Adding Http logging
+
+Program.cs:
+
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+///
+// Http Logging
+// Register core server logging middleware
+builder.Services.AddHttpLogging(options => { });
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+### Adding Http logging redaction
+
+Program.cs:
+
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+///
+// Http Logging
+// Register core server logging middleware
+builder.Services.AddHttpLogging(options => { });
+
+// Register and configure redaction for that middleware
+builder.Services.AddHttpLoggingRedaction(options => {
+    // Redaction configuration goes here
+});
+
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+### Adding HttpClient logging (with mandatory redaction)
+
+Program.cs:
+
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+/////////////////////////////////////////////////////
+// Http Logging
+// Register core server logging middleware
+builder.Services.AddHttpLogging(options => { });
+
+// Register and configure redaction for that middleware
+builder.Services.AddHttpLoggingRedaction(options => {
+    // Redaction configuration goes here
+});
+/////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+// HttpClient Logging
+//TODO: load settings from config
+builder.Services.AddExtendedHttpClientLogging();
+builder.Services.AddRedaction();
+
+///////////////////////////////////////////////////
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/client", () => {
+    //TODO: Create a HttpClient and make a request
+});
+
+app.Run();
+```
+
+### Adding Enricher
+
+```json
+{
+  "AmbientMetadata": {
+    "Application": {
+      "ApplicationName": "PaymentService",
+      "BuildVersion": "2.4.1",
+      "DeploymentRing": "canary"
+    }
+  },
+  "ApplicationLogEnricherOptions": {
+    "BuildVersion": true,
+    "DeploymentRing": true
+  }
+}
+
+```
+
 Program.cs:
 
 ```cs
@@ -64,7 +197,60 @@ builder.Services.AddExtendedHttpClientLogging();
 builder.Services.AddRedaction();
 ///////////////////////////////////////////////////
 
+///////////////////////////////////////
+//ENRICHING
+//
+// 1. Turn on the enrichment subsystem (required for all enrichers)
+//dotnet package add Microsoft.Extensions.Telemetry --project xxxxx
+builder.Logging.EnableEnrichment();
 
+// 2. Load from configuration AND apply code overrides
+builder.Services.AddApplicationLogEnricher(builder.Configuration.GetSection("ApplicationLogEnricherOptions"));
+///////////////////////////////////////
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+### Configuring Enricher for OpenTelemetry
+
+Program.cs:
+
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+/////////////////////////////////////////////////////
+// Http Logging
+// Register core server logging middleware
+builder.Services.AddHttpLogging(options => { });
+
+// Register and configure redaction for that middleware
+builder.Services.AddHttpLoggingRedaction(options => {
+    // Redaction configuration goes here
+});
+/////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////
+// HttpClient Logging
+//TODO: load settings from config
+builder.Services.AddExtendedHttpClientLogging();
+builder.Services.AddRedaction();
+///////////////////////////////////////////////////
 
 ///////////////////////////////////////
 //ENRICHING
@@ -110,21 +296,4 @@ app.UseHttpLogging();
 app.MapGet("/", () => "Hello World!");
 
 app.Run();
-```
-
-```json
-{
-  "AmbientMetadata": {
-    "Application": {
-      "ApplicationName": "PaymentService",
-      "BuildVersion": "2.4.1",
-      "DeploymentRing": "canary"
-    }
-  },
-  "ApplicationLogEnricherOptions": {
-    "BuildVersion": true,
-    "DeploymentRing": true
-  }
-}
-
 ```
