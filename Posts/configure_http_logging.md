@@ -24,10 +24,6 @@ dotnet package add Microsoft.Extensions.Diagnostics.Enrichment --project Contact
 #for AddExtendedHttpClientLogging
 ```
 
-```bash
-cat ContactApi/Program.cs
-```
-
 ### Adding Http logging
 
 Program.cs:

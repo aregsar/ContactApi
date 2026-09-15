@@ -27,10 +27,6 @@ dotnet package add Microsoft.Extensions.Compliance.Redaction
 #for AddExtendedHttpClientLogging
 ```
 
-```bash
-cat ContactApi/Program.cs
-```
-
 ### Adding Application Enrichment to all logs
 
 Adding Application Enricher settings:
