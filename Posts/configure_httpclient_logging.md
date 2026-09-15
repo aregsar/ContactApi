@@ -62,6 +62,33 @@ app.MapGet("/client", () => {
 app.Run();
 ```
 
+### Configure Http Client logging using appsettings.json
+
+Use for AddExtendedHttpClientLogging settings from appsettings.json
+
+```json
+
+{
+  "HttpClientLogging": {
+    "LogRequestStart": false,
+    "LogBody": false,
+    "BodySizeLimit": 32768,
+    "BodyReadTimeout": "00:00:01",
+    "RequestHeadersDataClasses": {
+      "User-Agent": "None",
+      "Content-Type": "None"
+    },
+    "ResponseHeadersDataClasses": {
+      "Content-Type": "None"
+    },
+    "RequestPathLoggingMode": "Formatted",
+    "RequestPathParameterRedactionMode": "Strict"
+  }
+}
+```
+
+TODO: add Builder extension to load httpclient settings and bind to a settings option class
+
 ### Adding HttpClient Enrichment
 
 Create CustomHttpClientLogEnricher file:
@@ -74,8 +101,29 @@ touch ContactHttpClientLogging/CustomHttpClientLogEnricher.cs
 Add code to CustomHttpClientLogEnricher.cs
 
 ```cs
-//TODO: Add Enricher class
+public class CustomHttpClientLogEnricher : IHttpClientLogEnricher
+{
+    // Evaluates right before the HTTP request is transmitted over the wire
+    public void Enrich(IEnrichmentTagCollector collector, HttpRequestMessage request)
+    {
+        // 1. Capture the destination host and scheme safely
+        if (request.RequestUri != null)
+        {
+            collector.Add("http.client.host", request.RequestUri.Host);
+            collector.Add("http.client.path", request.RequestUri.AbsolutePath);
+        }
 
+        // 2. Track outgoing request methods
+        collector.Add("http.client.method", request.Method.Method);
+
+        // 3. Inject tracing/correlation hints if custom routing is applied
+        if (request.Headers.Contains("X-Target-Service"))
+        {
+            var targetService = request.Headers.GetValues("X-Target-Service");
+            collector.Add("http.client.target_service", string.Join(",", targetService));
+        }
+    }
+}
 ```
 
 Program.cs:

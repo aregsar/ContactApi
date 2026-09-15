@@ -233,11 +233,29 @@ public class CustomHttpLogEnricher : IHttpLogEnricher
 {
     public void Enrich(IEnrichmentTagCollector collector, HttpContext httpContext)
     {
+        //Capture basic path or routing context
+        collector.Add("http.request.path", httpContext.Request.Path.Value ?? "/");
+        collector.Add("http.request.method", httpContext.Request.Method);
+
         //enrich using the httpContext.Request
         var userAgent = httpContext.Request.Headers.UserAgent.ToString();
         if (!string.IsNullOrEmpty(userAgent))
         {
             collector.Add("http.user_agent", userAgent);
+        }
+        if (httpContext.Request.Headers.TryGetValue("X-Correlation-ID", out var correlationId))
+        {
+            collector.Add("http.custom.correlation_id", correlationId.ToString());
+        }
+
+        //Enrich with authentication info
+        if (httpContext.User?.Identity?.IsAuthenticated == true)
+        {
+            var userId = httpContext.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                collector.Add("user.id", userId);
+            }
         }
 
         //enrich using the httpContext.Response
