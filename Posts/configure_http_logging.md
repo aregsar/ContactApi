@@ -42,7 +42,143 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpLogging(options => { });
+builder.Services.AddHttpLogging(options =>
+{
+    options.LoggingFields =
+        HttpLoggingFields.RequestMethod |
+        HttpLoggingFields.RequestPath |
+        HttpLoggingFields.RequestQuery |
+        HttpLoggingFields.RequestHeaders |
+        HttpLoggingFields.ResponseStatusCode |
+        HttpLoggingFields.Duration;
+    options.RequestBodyLogLimit = 4096;
+    options.ResponseBodyLogLimit = 4096;
+});
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+### Configuring Http Logging using appsettings.json settings
+
+In order to be able to change the properties that we can log dynamically at runtime instead requiring a application rebuild, we will use appsettings.json to configure our http logging with a few overrides in code for development environment.
+
+Add the  HttpLogging section to appsettings.json:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+       "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "HttpLogging": {
+    "LoggingFields": "Duration,
+        RequestProperties,
+        ResponseProperties,
+        RequestHeaders,
+        ResponseHeaders,
+        RequestBody,
+        ResponseBody,
+        ResponseStatusCode,
+        RequestQuery,
+        RequestPath,
+        RequestMethod",
+    "RequestBodyLogLimit": 32768,
+    "ResponseBodyLogLimit": 32768,
+    "CombineLogs": true,
+    "RequestHeaders": [
+      "Accept",
+      "Content-Type",
+      "User-Agent",
+      "X-API-Version",
+    ],
+    "ResponseHeaders": [
+      "Content-Type",
+      "Server"
+    ],
+    "MediaTypeOptions": {
+      "Clear": false,
+      "SupportedMediaTypes": [
+        "application/json",
+        "text/plain",
+        "application/xml",
+        "application/problem+json"
+      ]
+    }
+  },
+  "AllowedHosts": "*"
+}
+```
+
+Add a BuilderExtensions.cs extension file:
+
+```bash
+touch ContactHttpLogging/BuilderExtensions.cs
+```
+
+Add the following code to the BuilderExtensions.cs file:
+
+```cs
+public static class BuilderExtensions
+{
+    private static TBuilder AddHttpLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        //Strongly typed binding of HttpLoggingOptions to the custom configuration section HttpLogging in appsettings.json.
+        builder.Services.AddOptions<HttpLoggingOptions>().BindConfiguration("HttpLogging");
+
+        //The added HttpLogging Service implicitly picks up the bound HttpLoggingOptions under the hood.
+        builder.Services.AddHttpLogging(options =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                //overriding the HttpLoggingOptions in development
+
+                options.RequestBodyLogLimit = 1024 * 32;
+                options.ResponseBodyLogLimit = 1024 * 32;
+
+                //example of how to override RequestHeaders and ResponseHeaders
+                // options.RequestHeaders ??= new HashSet<string>();
+                // options.RequestHeaders.Clear();
+                // options.RequestHeaders.Add("User-Agent");
+                //
+                // options.ResponseHeaders ??= new HashSet<string>();
+                // options.ResponseHeaders.Clear();
+                // options.ResponseHeaders.Add("Content-Type");
+            }
+        });
+
+        return builder;
+    }
+}
+```
+
+> builder.Services.AddOptions<HttpLoggingOptions>().BindConfiguration() loads the settings in the appsettings.json into a HttpLoggingOptions object.
+Then under the hood the builder.Services.AddHttpLogging call uses the HttpLoggingOptions object.
+The AddHttpLogging<TBuilder> extension method of the builder wraps these two method calls to make their relationship explicit and encapsulated.
+Otherwise the asp.net framework does not provide any indication that the two calls are related.
+
+Update Program.cs to use the builder.AddHttpLogging() extension method instead of builder.Services.AddHttpLogging().
+
+Program.cs:
+
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Hosting;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddHttpLogging();
 
 var app = builder.Build();
 
@@ -68,7 +204,7 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpLogging(options => { });
+builder.AddHttpLogging();
 
 builder.Services.AddHttpLoggingRedaction(options => { });
 
@@ -134,7 +270,7 @@ Add the CustomHttpLogEnricher to the application services:
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpLogging(options => { });
+builder.AddHttpLogging();
 
 builder.Services.AddHttpLoggingRedaction(options => { });
 
@@ -201,7 +337,7 @@ Add the CustomHttpLoggingInterceptor to the application services:
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHttpLogging(options => { });
+builder.AddHttpLogging();
 
 builder.Services.AddHttpLoggingRedaction(options => { });
 
@@ -216,4 +352,19 @@ app.UseHttpLogging();
 app.MapGet("/", () => "Hello World!");
 
 app.Run();
+```
+
+### Disabling Http Logging middleware
+
+appsettings.json:
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware": "None"
+    }
+  }
+}
 ```
