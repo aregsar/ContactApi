@@ -368,3 +368,17 @@ appsettings.json:
   }
 }
 ```
+
+### Controlling the log level for http and Host logging
+
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+       "Microsoft.AspNetCore.Hosting.Diagnostics": "Warning",
+       "Microsoft.AspNetCore.HttpLogging.HttpLoggingMiddleware": "Warning"
+    }
+  }
+}
+```
