@@ -24,6 +24,29 @@ dotnet package add OpenTelemetry.Instrumentation.EntityFrameworkCore --prereleas
 dotnet package add OpenTelemetry.Instrumentation.GrpcNetClient --prerelease --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
 ```
 
+### Add a Trace enricher File
+
+Add GlobalTraceEnricher File
+
+```bash
+touch ContactOpenTelemetry/GlobalTraceEnricher.cs
+```
+
+```cs
+using OpenTelemetry.Trace;
+using System.Diagnostics;
+
+public class GlobalTraceEnricher : BaseProcessor<Activity>
+{
+    public override void OnEnd(Activity activity)
+    {
+        //Enrich activity with custom data
+        //Example
+        //activity.SetTag("machine.architecture", System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture.ToString());
+    }
+}
+```
+
 ### Add builder Extension File
 
 Add builder Extension File
@@ -56,7 +79,26 @@ public static class BuilderExtensions
                         .WithTracing(tracing =>
                         {
                             tracing.AddSource(CustomSourceName)
-                                    .AddAspNetCoreInstrumentation()
+                                    .AddAspNetCoreInstrumentation(options =>
+                                    {
+                                        options.EnrichWithHttpRequest = (activity, request) =>
+                                        {
+                                            //Enrich the activity with request data
+                                            //Example:
+                                            //activity.SetTag("request.accept_header", request.HttpContext.Request.Headers["accept"]);
+
+                                        };
+
+                                        // 2. Enrich using the outgoing HTTP Response
+                                        options.EnrichWithHttpResponse = (activity, response) =>
+                                        {
+                                            //Enrich the activity with response data
+                                            //Example:
+                                            //activity.SetTag("response.status", response.Status);
+
+                                        };
+                                    })
+                                    .AddProcessor<GlobalTraceEnricher>()
                                     .AddEntityFrameworkCoreInstrumentation()
                                     .AddGrpcClientInstrumentation()
                                     .AddHttpClientInstrumentation();
