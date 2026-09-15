@@ -201,3 +201,130 @@ Run the project:
 ```bash
 dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj --launch-profile http
 ```
+
+### Setting up the aspire dashboard standalone
+
+Run the aspire dashboard via docker run:
+
+```bash
+# -p 18888:18888: Maps the aspire dashboard http://localhost:18888
+# -p 4317:4317: Opens the native gRPC OTLP receiver port.
+# -p 4318:4318: Opens the fallback HTTP OTLP receiver port.
+# -e DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true: Skips browser token authentication flags so you do not have to copy-paste secure keys out of docker console strings during local testing
+
+
+docker run --rm -it -d \
+  --name aspire-dashboard \
+  -p 18888:18888 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -e DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true \
+  ://microsoft.com
+```
+
+Or run the aspire dashboard via docker compose:
+
+```yaml
+Docker compose:
+version: '3.8'
+services:
+  aspire-dashboard:
+    container_name: aspire-dashboard
+    image: ://microsoft.com
+    ports:
+      - "18888:18888" # Dashboard Web UI
+      - "4317:4317"   # OTLP gRPC endpoint
+      - "4318:4318"   # OTLP HTTP endpoint
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+
+```
+
+The dashboard will directly recieve the OLTP exported data on port 4317.
+There is no OLTP collector that receives the exported data on port 4317 and forwards it to the dashboard on a different port. So we dont need to run a OpenTelemtry collector.
+
+Add env vars to properties/launchsettings.json http profile instead of appsettings.json:
+
+```json
+{
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OTEL_SERVICE_NAME": "OpenTelemetryDemo",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc"
+      }
+    }
+  }
+}
+```
+
+### Using Auth with the dashboard
+
+docker run --rm -it -d \
+  --name aspire-dashboard \
+  -p 18888:18888 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -e DASHBOARD__FRONTEND__AUTHMODE=BrowserToken \
+  -e DASHBOARD__FRONTEND__BROWSERTOKEN=MyPassword123 \
+  -e DASHBOARD__OTLP__AUTHMODE=ApiKey \
+  -e DASHBOARD__OTLP__PRIMARYAPIKEY=MySecretIngestionKey1234 \
+  ://microsoft.com
+
+```
+
+Or run the aspire dashboard via docker compose:
+
+```yaml
+Docker compose:
+version: '3.8'
+services:
+  aspire-dashboard:
+    container_name: aspire-dashboard
+    image: ://microsoft.com
+    ports:
+      - "18888:18888" # Dashboard Web UI
+      - "4317:4317"   # OTLP gRPC endpoint
+      - "4318:4318"   # OTLP HTTP endpoint
+    environment:
+      - DASHBOARD__FRONTEND__AUTHMODE=BrowserToken
+      - DASHBOARD__FRONTEND__BROWSERTOKEN=MyPassword123
+      - DASHBOARD__OTLP__AUTHMODE=ApiKey
+      - DASHBOARD__OTLP__PRIMARYAPIKEY=MySecretIngestionKey1234
+
+```
+
+```json
+{
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "swagger",
+      "applicationUrl": "http://localhost:5000",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "OTEL_SERVICE_NAME": "OpenTelemetryDemo",
+        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+        "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+        "OTEL_EXPORTER_OTLP_HEADERS":"x-otlp-api-key=ProdSecretIngestionKeyABCDEFG98765"
+      }
+    }
+  }
+}
+```
+
+Note both the DASHBOARD__OTLP__PRIMARYAPIKEY api key and the x-otlp-api-key header value from OTEL_EXPORTER_OTLP_HEADERS is the same.
+
+x-otlp-api-key header is the header that the OpenTelemetry exporter from out project sends to the <http://localhost:4317> and the dashboard running at that endpoint expects the header to match the DASHBOARD__OTLP__PRIMARYAPIKEY env var that the dashboard service was launched with.
+
+The DASHBOARD__FRONTEND__BROWSERTOKEN is for securing the dashboard UI.
+If that env var is set when launching the dashboard service, the dashboard UI will have a form to enter that password to be allowed to view the dashbaord.
