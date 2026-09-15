@@ -243,7 +243,8 @@ services:
 The dashboard will directly recieve the OLTP exported data on port 4317.
 There is no OLTP collector that receives the exported data on port 4317 and forwards it to the dashboard on a different port. So we dont need to run a OpenTelemtry collector.
 
-Add env vars to properties/launchsettings.json http profile instead of appsettings.json:
+While it is preferred to add OTEL_ env vars to appsettings.json, we can still
+add env vars to properties/launchsettings.json http profile instead of appsettings.json or to override  appsettings.json file env var settings:
 
 ```json
 {
