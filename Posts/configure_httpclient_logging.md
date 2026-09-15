@@ -45,7 +45,29 @@ var builder = WebApplication.CreateBuilder(args);
 
 
 //TODO: load settings from config
-builder.Services.AddExtendedHttpClientLogging();
+builder.Services.AddExtendedHttpClientLogging(options =>
+{
+    // Log request headers with data classification
+    options.RequestHeadersDataClasses.Add("User-Agent", DataClassification.None);
+    options.RequestHeadersDataClasses.Add("Authorization", DataClassification.Unknown);
+
+    // Log response headers
+    options.ResponseHeadersDataClasses.Add("Content-Type", DataClassification.None);
+
+    // Enable request/response body logging (use carefully in production)
+    options.LogBody = true;
+
+    // Limit request/response body reading to 4KB
+    options.BodySizeLimit = 4096;
+
+    // Ensure that application/json is considered a content type we want to log
+    options.RequestBodyContentTypes.Add("application/json");
+    options.ResponseBodyContentTypes.Add("application/json");
+});
+
+
+
+
 builder.Services.AddRedaction();
 
 
@@ -88,6 +110,19 @@ Use for AddExtendedHttpClientLogging settings from appsettings.json
 ```
 
 TODO: add Builder extension to load httpclient settings and bind to a settings option class
+
+BuilderExtensions.cs
+
+```cs
+//TODO: load settings from config
+
+```
+
+Program.cs
+
+```cs
+//TODO: switch to using BuilderExtensions AddHttpClientLogging() extension method
+```
 
 ### Adding HttpClient Enrichment
 

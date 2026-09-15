@@ -202,7 +202,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddHttpLogging();
 
-builder.Services.AddHttpLoggingRedaction(options => { });
+builder.Services.AddHttpLoggingRedaction(options =>
+{
+    // redact specific headers, parameters and paths
+});
 
 var app = builder.Build();
 
