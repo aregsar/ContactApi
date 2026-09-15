@@ -36,17 +36,12 @@ Program.cs:
 // using Microsoft.AspNetCore.Diagnostics.Logging;
 // using Microsoft.AspNetCore.Http;
 // using Microsoft.Extensions.DependencyInjection;
-// using Microsoft.Extensions.Diagnostics.Enrichment;
 // using Microsoft.Extensions.Hosting;
-// using System.Security.Claims;
 // using Microsoft.Extensions.Http.Diagnostics;
 // using System.Net.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
-///
-// Http Logging
-// Register core server logging middleware
 builder.Services.AddHttpLogging(options => { });
 
 var app = builder.Build();
@@ -66,7 +61,6 @@ Program.cs:
 // using Microsoft.AspNetCore.Diagnostics.Logging;
 // using Microsoft.AspNetCore.Http;
 // using Microsoft.Extensions.DependencyInjection;
-// using Microsoft.Extensions.Diagnostics.Enrichment;
 // using Microsoft.Extensions.Hosting;
 // using System.Security.Claims;
 // using Microsoft.Extensions.Http.Diagnostics;
@@ -74,16 +68,9 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-///
-// Http Logging
-// Register core server logging middleware
 builder.Services.AddHttpLogging(options => { });
 
-// Register and configure redaction for that middleware
-builder.Services.AddHttpLoggingRedaction(options => {
-    // Redaction configuration goes here
-});
-
+builder.Services.AddHttpLoggingRedaction(options => { });
 
 var app = builder.Build();
 
@@ -96,16 +83,137 @@ app.Run();
 
 ### Add Http Logging Enrichement
 
+Add a CustomHttpLogEnricher file:
+
+```bash
+
+touch ContactHttpLogging/CustomHttpLogEnricher.cs
+```
+
+Add the code to CustomHttpLogEnricher.cs
+
+```cs
+using Microsoft.AspNetCore.Diagnostics.Middleware;
+using Microsoft.Extensions.Diagnostics.Enrichment;
+using Microsoft.AspNetCore.Http;
+
+public class CustomHttpLogEnricher : IHttpLogEnricher
+{
+    public void Enrich(IEnrichmentTagCollector collector, HttpContext httpContext)
+    {
+        //enrich using the httpContext.Request
+        var userAgent = httpContext.Request.Headers.UserAgent.ToString();
+        if (!string.IsNullOrEmpty(userAgent))
+        {
+            collector.Add("http.user_agent", userAgent);
+        }
+
+        //enrich using the httpContext.Response
+        if (httpContext.Response.Headers.TryGetValue("X-Custom-Header", out var customHeaderValue))
+        {
+            collector.Add("http.response.custom_header", customHeaderValue.ToString());
+        }
+    }
+}
+```
+
+Add the CustomHttpLogEnricher to the application services:
+
 ```cs
 //Turn on the enrichment logging subsystem
 //Is this required for http logging enrichement ???
 //builder.Logging.EnableEnrichment();
 
-//builder.Services.AddHttpLogEnricher<CustomHttpLogEnricher>();
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(options => { });
+
+builder.Services.AddHttpLoggingRedaction(options => { });
+
+builder.Services.AddHttpLogEnricher<CustomHttpLogEnricher>();
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
 ```
 
 ### Add Http Logging Interception
 
+Add a CustomHttpLoggingInterceptor file:
+
+```bash
+touch ContactHttpLogging/CustomHttpLoggingInterceptor.cs
+```
+
+Add the code to CustomHttpLoggingInterceptor.cs
+
 ```cs
-//builder.Services.AddHttpLoggingInterceptor<CustomHttpLoggingInterceptor>();
+public class CustomHttpLoggingInterceptor : IHttpLoggingInterceptor
+{
+    public ValueTask OnRequestAsync(HttpLoggingInterceptorContext context)
+    {
+
+        context.HttpContext.Request.Headers.Remove("My-Request-Header");
+
+        context.AddParameter("random-request-param", Guid.NewGuid().ToString());
+
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask OnResponseAsync(HttpLoggingInterceptorContext context)
+    {
+
+        logContext.HttpContext.Response.Headers.Remove("My-Response-Header");
+
+        context.AddParameter("random-response-param", Guid.NewGuid().ToString());
+
+        return ValueTask.CompletedTask;
+    }
+}
+```
+
+Add the CustomHttpLoggingInterceptor to the application services:
+
+```cs
+//Turn on the enrichment logging subsystem
+//Is this required for http logging enrichement ???
+//builder.Logging.EnableEnrichment();
+
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddHttpLogging(options => { });
+
+builder.Services.AddHttpLoggingRedaction(options => { });
+
+builder.Services.AddHttpLogEnricher<CustomHttpLogEnricher>();
+
+builder.Services.AddHttpLoggingInterceptor<CustomHttpLoggingInterceptor>();
+
+var app = builder.Build();
+
+app.UseHttpLogging();
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
 ```
