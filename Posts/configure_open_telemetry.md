@@ -99,7 +99,11 @@ public static class BuilderExtensions
                                         };
                                     })
                                     .AddProcessor<GlobalTraceEnricher>()
-                                    .AddEntityFrameworkCoreInstrumentation()
+                                    .AddEntityFrameworkCoreInstrumentation(options =>
+                                    {
+                                        // .NET 10 Native tracing configurations
+                                        options.SetDbStatementForText = true;
+                                    })
                                     .AddGrpcClientInstrumentation()
                                     .AddHttpClientInstrumentation();
                         });
