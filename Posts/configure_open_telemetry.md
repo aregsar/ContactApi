@@ -202,98 +202,165 @@ Run the project:
 dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj --launch-profile http
 ```
 
-### Setting up the aspire dashboard standalone
+## Setting up the aspire dashboard standalone
 
-Run the aspire dashboard via docker run:
+There are multiple ways to setup the aspire dashboard to run in standalone mode.
+
+We will cover three ways below:
+
+### Running the dashboard natively (Mac and Windows only)
+
+Using the aspire cli
+
+Downnload the aspire cli
 
 ```bash
-# -p 18888:18888: Maps the aspire dashboard http://localhost:18888
-# -p 4317:4317: Opens the native gRPC OTLP receiver port.
-# -p 4318:4318: Opens the fallback HTTP OTLP receiver port.
-# -e DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true: Skips browser token authentication flags so you do not have to copy-paste secure keys out of docker console strings during local testing
+####
 
-
-docker run --rm -it -d \
-  --name aspire-dashboard \
-  -p 18888:18888 \
-  -p 4317:4317 \
-  -p 4318:4318 \
-  -e DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true \
-  ://microsoft.com
 ```
 
-Or run the aspire dashboard via docker compose:
+Run the dashboard command to launch the aspire dashboard:
 
-```yaml
-Docker compose:
-version: '3.8'
+```bash
+aspire dashboard run --allow-anonymous
+```
+
+When we run the dashboard on our host it ingests exported data on localhost:4317.
+
+Our application OpenTelemetry exports to localhost:4317 by default.
+
+The dashboard should be available at <http://localhost:18888>
+
+### Running the dashboard as a docker container
+
+We can also run the official aspire dashboard docker container using docker compose
+
+When we run the dashboard in a docker container it ingest the exported data on port 18889 by default
+
+OpenTelemetry exports data to port 4317 by default so we have to map it to the internal port 18889 for the dashboard.
+
+```yml
 services:
   aspire-dashboard:
-    container_name: aspire-dashboard
     image: ://microsoft.com
+    container_name: aspire-dashboard
     ports:
       - "18888:18888" # Dashboard Web UI
-      - "4317:4317"   # OTLP gRPC endpoint
-      - "4318:4318"   # OTLP HTTP endpoint
+      - "4317:18889"  # Maps standard GRPC OTLP host port 4317 to internal dashboard port 18889
+      - "4318:18890" # Maps standard HTTP OTLP host port 4317 to internal dashboard port 18889
+    environment:
+      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
+```
+
+```bash
+docker run --rm -it \
+  -p 18888:18888 \
+  -p 4317:18889 \
+  -p 4318:18890 \
+  --name aspire-dashboard \
+  mcr.microsoft.com/dotnet/aspire-dashboard:latest
+```
+
+The dashboard should be available at <http://localhost:18888>
+
+### Running the OpenTelemetry Collector and aspire dashboard together
+
+In production setups the OT is generally exported to a central collector service.
+
+The collector service then distributes the exported data to multiple other specialized dashboard/analytics systems.
+
+We can simulate this locally by using Docker compose to run the collector and dashboard a two separate containers.
+
+The aspire dashboard in this case acts one of the dashboard/analytics systems that the collector distributes it data to.
+
+A otel-collector-config.yaml file mounted to the collector container volume configures the collector to receive the OTexported data on the standard OT port 4317 that our application exports to.
+
+The collector configuration also specified that the collector distribute the data to aspire-dashboard:18889 over the internal docker compose network to the dashboard container.
+
+```bash
+touch docker-compose.yaml
+```
+
+```yml
+services:
+  aspire-dashboard:
+    image: ://microsoft.com
+    container_name: aspire-dashboard
+    ports:
+      - "18888:18888" # Dashboard Web UI
     environment:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
 
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: otel-collector
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml # Fixed default path for -contrib image
+    ports:
+      - "4317:4317" # Exposed to your host machine's ASP.NET app (gRPC)
+      - "4318:4318" # Exposed to your host machine's ASP.NET app (HTTP)
+    depends_on:
+      - aspire-dashboard
 ```
 
-The dashboard will directly recieve the OLTP exported data on port 4317.
-There is no OLTP collector that receives the exported data on port 4317 and forwards it to the dashboard on a different port. So we dont need to run a OpenTelemtry collector.
+The collector configuration yaml file
 
-While it is preferred to add OTEL_ env vars to appsettings.json, we can still
-add env vars to properties/launchsettings.json http profile instead of appsettings.json or to override  appsettings.json file env var settings:
-
-```json
-{
-  "profiles": {
-    "http": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "applicationUrl": "http://localhost:5000",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "OTEL_SERVICE_NAME": "OpenTelemetryDemo",
-        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
-        "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc"
-      }
-    }
-  }
-}
+```bash
+touch otel-collector-config.yaml
 ```
 
-### Using Auth with the dashboard
+otel-collector-config.yaml
 
-docker run --rm -it -d \
-  --name aspire-dashboard \
-  -p 18888:18888 \
-  -p 4317:4317 \
-  -p 4318:4318 \
-  -e DASHBOARD__FRONTEND__AUTHMODE=BrowserToken \
-  -e DASHBOARD__FRONTEND__BROWSERTOKEN=MyPassword123 \
-  -e DASHBOARD__OTLP__AUTHMODE=ApiKey \
-  -e DASHBOARD__OTLP__PRIMARYAPIKEY=MySecretIngestionKey1234 \
-  ://microsoft.com
+```yml
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
 
+processors:
+  batch:
+
+exporters:
+  otlp/aspire:
+    endpoint: "aspire-dashboard:18889" # Internal Docker routing
+    tls:
+      insecure: true
+
+service:
+  processors: [batch]
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/aspire]
+    metrics:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/aspire]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/aspire]
 ```
 
-Or run the aspire dashboard via docker compose:
+The dashboard should be available at <http://localhost:18888>
+
+### Using Auth with the dashboard (REMOVE)
 
 ```yaml
 Docker compose:
 version: '3.8'
 services:
   aspire-dashboard:
-    container_name: aspire-dashboard
     image: ://microsoft.com
+    container_name: aspire-dashboard
     ports:
       - "18888:18888" # Dashboard Web UI
-      - "4317:4317"   # OTLP gRPC endpoint
-      - "4318:4318"   # OTLP HTTP endpoint
+      - "4317:18889"  # Maps standard GRPC OTLP host port 4317 to internal dashboard port 18889
+      - "4318:18890" # Maps standard HTTP OTLP host port 4317 to internal dashboard port 18889
     environment:
       - DASHBOARD__FRONTEND__AUTHMODE=BrowserToken
       - DASHBOARD__FRONTEND__BROWSERTOKEN=MyPassword123
@@ -302,24 +369,16 @@ services:
 
 ```
 
+Add the OTEL_EXPORTER_OTLP_HEADERS to the appsettings.json file:
+
+Here are the env vars at the root of the appsettings.json file:
+
 ```json
 {
-  "profiles": {
-    "http": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "applicationUrl": "http://localhost:5000",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "OTEL_SERVICE_NAME": "OpenTelemetryDemo",
-        "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
-        "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
-        "OTEL_EXPORTER_OTLP_HEADERS":"x-otlp-api-key=ProdSecretIngestionKeyABCDEFG98765"
-      }
-    }
-  }
+"OTEL_SERVICE_NAME": "OpenTelemetryDemo",
+"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317",
+"OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+"OTEL_EXPORTER_OTLP_HEADERS":"x-otlp-api-key=ProdSecretIngestionKeyABCDEFG98765"
 }
 ```
 
