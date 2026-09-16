@@ -202,34 +202,57 @@ Run the project:
 dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj --launch-profile http
 ```
 
-## Setting up the aspire dashboard standalone
+## Running up the aspire dashboard in standalone mode
 
-There are multiple ways to setup the aspire dashboard to run in standalone mode.
+To view the OpenTelemetry data exported by our app we can to run the .NET Aspire dashboard.
 
-We will cover three ways below:
+When using an Aspire AppHost project, the Aspire Dashboard can be run by launching the AppHost project.
 
-### Running the dashboard natively (Mac and Windows only)
+We are not using .NET Aspire but we can still launch the dashboard in standalone mode.
 
-Using the aspire cli
+There are multiple approaches to run the dashboard in standalone mode.
 
-Downnload the aspire cli
+We will cover three common approaches below.
+
+### Running the dashboard using the Aspire Cli (Mac and Windows only)
+
+The easiest wat is to run the dashboard natively on our host using the Aspire Cli.
+
+This only works for Mac and Windows.
+
+First we need to install the aspire cli:
 
 ```bash
-####
-
+dotnet tool install -g Aspire.Cli
 ```
 
-Run the dashboard command to launch the aspire dashboard:
+Then we can run the dashboard command to launch the aspire dashboard service:
 
 ```bash
 aspire dashboard run --allow-anonymous
 ```
 
-When we run the dashboard on our host it ingests exported data on localhost:4317.
+When we run the dashboard service by default it ingests the exported data from our app on localhost:4317.
 
-Our application OpenTelemetry exports to localhost:4317 by default.
+The OpenTelemetry configuration in our application exports to localhost:4317 by default.
 
 The dashboard should be available at <http://localhost:18888>
+
+you can change the port that the service listens on by passing an env var:
+
+```bash
+ASPIRE_DASHBOARD_OTLP_GRPC_ENDPOINT_URL="http://localhost:18889" aspire dashboard run --allow-anonymous
+```
+
+This changes the ingestion port to 18889.
+
+If we do that then we need to change the OTEL_EXPORTER_OTLP_ENDPOINT setting value in appsettings.json of our application to match.
+
+In appsettings.json change the value:
+
+```json
+"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:18889",
+```
 
 ### Running the dashboard as a docker container
 
@@ -263,7 +286,7 @@ docker run --rm -it \
 
 The dashboard should be available at <http://localhost:18888>
 
-### Running the OpenTelemetry Collector and aspire dashboard together
+### Running an OpenTelemetry Collector with aspire dashboard
 
 In production setups the OT is generally exported to a central collector service.
 
