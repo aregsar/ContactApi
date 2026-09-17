@@ -89,7 +89,8 @@ app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
     var client = _httpClientFactory.CreateClient();
 
     //make a request to root URL
-    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/");
+    //https://jsonplaceholder.typicode.com
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
     var response = await client.GetAsync("http://localhost:5014/");
     return await response.Content.ReadAsStringAsync();
 
