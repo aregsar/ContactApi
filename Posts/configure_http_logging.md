@@ -121,7 +121,12 @@ touch ContactHttpLogging/BuilderExtensions.cs
 
 Add the following code to the BuilderExtensions.cs file:
 
+BuilderExtensions.cs
+
 ```cs
+using Microsoft.AspNetCore.HttpLogging;//package built into sdk
+using Microsoft.Extensions.DependencyInjection;
+
 public static class BuilderExtensions
 {
     private static TBuilder AddHttpLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
@@ -129,7 +134,8 @@ public static class BuilderExtensions
         //Strongly typed binding of HttpLoggingOptions to the custom configuration section HttpLogging in appsettings.json.
         builder.Services.AddOptions<HttpLoggingOptions>().BindConfiguration("HttpLogging");
 
-        //The added HttpLogging Service implicitly picks up the bound HttpLoggingOptions under the hood.
+        //The AddHttpLogging implicitly picks up the bound HttpLoggingOptions under the hood and
+        //in development mode overrides the some of the settings in code.
         builder.Services.AddHttpLogging(options =>
         {
             if (builder.Environment.IsDevelopment())

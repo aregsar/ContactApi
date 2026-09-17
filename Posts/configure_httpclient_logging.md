@@ -43,8 +43,7 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-//TODO: load settings from config
+builder.Services.AddRedaction();
 builder.Services.AddExtendedHttpClientLogging(options =>
 {
     // Log request headers with data classification
@@ -65,20 +64,20 @@ builder.Services.AddExtendedHttpClientLogging(options =>
     options.ResponseBodyContentTypes.Add("application/json");
 });
 
-
-
-
-builder.Services.AddRedaction();
+builder.Services.AddHttpClient<MyApiClient>();
+builder.Services.AddHttpClient("MyNamedApiClient")
+    .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
 
 
 var app = builder.Build();
 
-app.UseHttpLogging();
-
 app.MapGet("/", () => "Hello World!");
 
 app.MapGet("/client", () => {
-    //TODO: Create a HttpClient and make a request
+    //TODO: Create a HttpClient and make a request to root URL
+    //MyApiClient client = new();
+    //client.Get("/");
+
 });
 
 app.Run();
@@ -86,35 +85,97 @@ app.Run();
 
 ### Configure Http Client logging using appsettings.json
 
-Use for AddExtendedHttpClientLogging settings from appsettings.json
+Add the HttpClientLogging settings to appsettings.json.
+
+Load the settings for AddExtendedHttpClientLogging.
 
 ```json
-
 {
-  "HttpClientLogging": {
-    "LogRequestStart": false,
-    "LogBody": false,
+"HttpClientLogging": {
+    "LogRequestStart": true,
+    "LogBody": true,
     "BodySizeLimit": 32768,
     "BodyReadTimeout": "00:00:01",
+    "RequestPathLoggingMode": "Formatted",
+    "RequestPathParameterRedactionMode": "Strict",
     "RequestHeadersDataClasses": {
       "User-Agent": "None",
-      "Content-Type": "None"
+      "Content-Type": "None",
+      "Authorization": "Private"
     },
     "ResponseHeadersDataClasses": {
-      "Content-Type": "None"
+      "Content-Type": "None",
+      "Server": "None"
     },
-    "RequestPathLoggingMode": "Formatted",
-    "RequestPathParameterRedactionMode": "Strict"
+    "RequestBodyContentTypes": [
+      "application/json",
+      "text/plain"
+    ],
+    "ResponseBodyContentTypes": [
+      "application/json",
+      "text/plain"
+    ]
+  },
+  "HttpClientLoggingNamedPaymentGateway": {
+    "LogBody": true,
+    "BodySizeLimit": 2048,
+    "RequestHeadersDataClasses": {
+      "Authorization": "Private",
+      "X-Api-Key": "Private"
+    }
+  },
+  "HttpClientLoggingNamedTypedPaymentGateway": {
+    "LogBody": true,
+    "BodySizeLimit": 65536,
+    "RequestHeadersDataClasses": {
+      "User-Agent": "None",
+      "Accept": "None"
+    }
   }
 }
 ```
 
+Add a BuilderExtensions.cs extension file:
+
+```bash
+touch ContactHttpLogging/BuilderExtensions.cs
+```
+
 TODO: add Builder extension to load httpclient settings and bind to a settings option class
+Add the following code to the BuilderExtensions.cs file:
 
 BuilderExtensions.cs
 
 ```cs
-//TODO: load settings from config
+//dotnet package add Microsoft.Extensions.Http.Diagnostics
+using Microsoft.Extensions.Http.Logging;
+using Microsoft.Extensions.DependencyInjection;
+public static class BuilderExtensions
+{
+    private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
+        builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
+
+        //configure all Http Clients
+        //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
+        builder.Services.AddExtendedHttpClientLogging(options => {});
+
+        // //configure Named Http Client
+        // builder.Services.AddOptions<LoggingOptions>("PaymentGateway")
+        //                 .BindConfiguration("HttpClientLoggingNamedPaymentGateway");
+        // builder.Services.AddHttpClient("PaymentGateway").AddExtendedHttpClientLogging(options => {
+        // });
+
+        // //configure Typed Http Client
+        // builder.Services.AddOptions<LoggingOptions>(typeof(PaymentGatewayClient).FullName!)
+        //                 .BindConfiguration("HttpClientLoggingNamedTypedPaymentGateway");
+        // builder.Services.AddHttpClient<PaymentGatewayClient>().AddExtendedHttpClientLogging(options => {
+        // });
+
+        return builder;
+    }
+}
 
 ```
 
