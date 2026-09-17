@@ -280,6 +280,8 @@ public class CustomHttpClientLogEnricher : IHttpClientLogEnricher
 }
 ```
 
+Add the CustomHttpClientLogEnricher to the service container:
+
 Program.cs:
 
 ```cs
@@ -295,12 +297,21 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-//TODO: load settings from config
-builder.Services.AddExtendedHttpClientLogging();
-builder.Services.AddRedaction();
+
+builder.AddHttpClientLogging();
 
 
-//enables enrichment subsystme
+// builder.Services.AddHttpClient<MyApiClient>();
+// builder.Services.AddHttpClient("MyNamedApiClient")
+//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
+
+// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
+// {
+//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+// });
+
+
+//enables enrichment subsystem
 //Is this required for httpclient enrichment ???
 //builder.Logging.EnableEnrichment();
 
@@ -308,9 +319,158 @@ builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
 
 var app = builder.Build();
 
-app.UseHttpLogging();
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/client", () => {
+    //TODO: Create a HttpClient and make a request to root URL
+    //MyApiClient client = new();
+    //client.Get("/");
+
+});
+
+app.Run();
+```
+
+### Intercepting HttpClient requests for custom logging (Bonus)
+
+Add a new file HttpLoggingHandler that will intercept httpclient requests
+
+```bash
+touch ContactHttpClientLogging/HttpLoggingHandler
+
+```
+
+```cs
+public class HttpLoggingHandler : DelegatingHandler
+{
+    private readonly ILogger _logger;
+
+    public HttpLoggingHandler(ILogger logger)
+    {
+        _logger = logger;
+    }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request,
+        CancellationToken cancellationToken)
+    {
+        var traceId = request.Headers.TryGetValues("trace-id", out var values) ? values.FirstOrDefault() : null;
+        traceId ??= Guid.NewGuid().ToString();
+
+        var requestBuilder = new StringBuilder();
+
+        var url = $"{request.RequestUri?.Host}:{request.RequestUri?.Port}{request.RequestUri?.AbsolutePath}";
+        var headers = request.Headers.ExceptSensitiveHeaders().Select(x => $"[{x.Key}, {string.Join(",", x.Value)}]");
+
+        requestBuilder.AppendLine($"[REQUEST] {traceId}");
+        requestBuilder.AppendLine($"{request.Method}: {request.RequestUri?.Scheme}://{url}");
+        requestBuilder.AppendLine($"Headers: {string.Join(", ", headers)}");
+
+        if (request.Content != null)
+        {
+            if (request.Content.Headers.Any())
+            {
+                var contentHeaders = request.Content.Headers
+                    .ExceptSensitiveHeaders().Select(x => $"[{x.Key}, {string.Join(",", x.Value)}]");
+
+                requestBuilder.AppendLine($"Content headers: {string.Join(", ", contentHeaders)}");
+            }
+
+            if (RequestCanBeLogged(request.RequestUri?.AbsolutePath))
+            {
+                requestBuilder.AppendLine("Content:");
+                requestBuilder.AppendLine(await request.Content.ReadAsStringAsync(cancellationToken));
+            }
+        }
+
+        _logger.LogDebug("{Request}", requestBuilder.ToString());
+
+        var stopwatch = new Stopwatch();
+        stopwatch.Start();
+
+        var response = await base.SendAsync(request, cancellationToken);
+        stopwatch.Stop();
+
+        var responseBuilder = new StringBuilder();
+        responseBuilder.AppendLine($"[RESPONSE] {traceId}");
+        responseBuilder.AppendLine($"{request.Method}: {request.RequestUri?.Scheme}://{url} {(int)response.StatusCode} {response.ReasonPhrase} executed in {stopwatch.Elapsed.TotalMilliseconds} ms");
+        responseBuilder.AppendLine($"Headers: {string.Join(", ", response.Headers.Select(x => $"[{x.Key}, {string.Join(",", x.Value)}]"))}");
+
+        if (response.Content.Headers.Any())
+        {
+            var contentHeaders = response.Content
+                .Headers.Select(x => $"[{x.Key}, {string.Join(",", x.Value)}]");
+
+            requestBuilder.AppendLine($"Content headers: {string.Join(", ", contentHeaders)}");
+        }
+
+        if (ResponseCanBeLogged(request.RequestUri?.AbsolutePath) && ResponseCanBeLogged(request.RequestUri?.AbsolutePath))
+        {
+            responseBuilder.AppendLine("Content:");
+            responseBuilder.AppendLine(await response.Content.ReadAsStringAsync(cancellationToken));
+        }
+
+        _logger.LogDebug("{Response}", responseBuilder.ToString());
+        _logger.LogDebug("Request completed in {ElapsedTotalMilliseconds}ms", stopwatch.Elapsed.TotalMilliseconds);
+        return response;
+    }
+}
+
+```
+
+Attache the HttpLoggingHandler to the HttpClient:
+
+Program.cs
+
+```cs
+
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+
+builder.AddHttpClientLogging();
+
+
+// builder.Services.AddHttpClient<MyApiClient>();
+// builder.Services.AddHttpClient("MyNamedApiClient")
+//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
+
+// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
+// {
+//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+// })
+// .AddHttpMessageHandler(configure =>
+// {
+//     var logger = configure.GetRequiredService<ILoggerFactory>()
+//         .CreateLogger("json-placeholder-todos");
+
+//     return new HttpLoggingHandler(logger);
+// });
+
+
+//enables enrichment subsystem
+//Is this required for httpclient enrichment ???
+//builder.Logging.EnableEnrichment();
+
+builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
+
+var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/client", () => {
+    //TODO: Create a HttpClient and make a request to root URL
+    //MyApiClient client = new();
+    //client.Get("/");
+
+});
 
 app.Run();
 ```
