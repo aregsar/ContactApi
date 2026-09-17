@@ -232,13 +232,17 @@ Then we can run the dashboard command to launch the aspire dashboard service:
 aspire dashboard run --allow-anonymous
 ```
 
-When we run the dashboard service by default it ingests the exported data from our app on localhost:4317.
+The dashboard should be available at <http://localhost:4317>
 
-The OpenTelemetry configuration in our application exports to localhost:4317 by default.
+When we run the dashboard service, by default it is configured to ingests the exported data from our project on localhost:4317.
 
-The dashboard should be available at <http://localhost:18888>
+The OpenTelemetry configuration in our application exports to localhost:4317 by based on the OTEL_EXPORTER_OTLP_ENDPOINT setting in appsettings.json of our project.
 
-you can change the port that the service listens on by passing an env var:
+```json
+"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4317"
+```
+
+We can change the port that the dashboard service listens on by passing an environment variable before running the aspire dashboard run command:
 
 ```bash
 ASPIRE_DASHBOARD_OTLP_GRPC_ENDPOINT_URL="http://localhost:18889" aspire dashboard run --allow-anonymous
@@ -246,9 +250,9 @@ ASPIRE_DASHBOARD_OTLP_GRPC_ENDPOINT_URL="http://localhost:18889" aspire dashboar
 
 This changes the ingestion port to 18889.
 
-If we do that then we need to change the OTEL_EXPORTER_OTLP_ENDPOINT setting value in appsettings.json of our application to match.
+If we do that then we need to change the corresponding OTEL_EXPORTER_OTLP_ENDPOINT setting value in appsettings.json of our project to match.
 
-In appsettings.json change the value:
+appsettings.json:
 
 ```json
 "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:18889",
@@ -275,13 +279,10 @@ services:
       - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
 ```
 
+Run the dashboard:
+
 ```bash
-docker run --rm -it \
-  -p 18888:18888 \
-  -p 4317:18889 \
-  -p 4318:18890 \
-  --name aspire-dashboard \
-  mcr.microsoft.com/dotnet/aspire-dashboard:latest
+docker-compose up -d
 ```
 
 The dashboard should be available at <http://localhost:18888>
@@ -301,7 +302,7 @@ A otel-collector-config.yaml file mounted to the collector container volume conf
 The collector configuration also specified that the collector distribute the data to aspire-dashboard:18889 over the internal docker compose network to the dashboard container.
 
 ```bash
-touch docker-compose.yaml
+touch ContactOpenTelemetry/docker-compose.yaml
 ```
 
 ```yml
@@ -329,7 +330,7 @@ services:
 The collector configuration yaml file
 
 ```bash
-touch otel-collector-config.yaml
+touch ContactOpenTelemetry/otel-collector-config.yaml
 ```
 
 otel-collector-config.yaml
@@ -369,9 +370,23 @@ service:
       exporters: [otlp/aspire]
 ```
 
+Run the dashboard:
+
+```bash
+docker-compose up -d
+```
+
 The dashboard should be available at <http://localhost:18888>
 
-### Using Auth with the dashboard (REMOVE)
+### Testing the dashboard
+
+Run the project:
+
+```bash
+dotnet run --project ContactApi/ContactApi.csproj
+```
+
+### Using Auth with the dashboard (BONUS)
 
 ```yaml
 Docker compose:
@@ -405,7 +420,7 @@ Here are the env vars at the root of the appsettings.json file:
 }
 ```
 
-Note both the DASHBOARD__OTLP__PRIMARYAPIKEY api key and the x-otlp-api-key header value from OTEL_EXPORTER_OTLP_HEADERS is the same.
+We can see that both the DASHBOARD__OTLP__PRIMARYAPIKEY api key and the x-otlp-api-key header value from OTEL_EXPORTER_OTLP_HEADERS is the same.
 
 x-otlp-api-key header is the header that the OpenTelemetry exporter from out project sends to the <http://localhost:4317> and the dashboard running at that endpoint expects the header to match the DASHBOARD__OTLP__PRIMARYAPIKEY env var that the dashboard service was launched with.
 

@@ -56,6 +56,8 @@ Add builder Extension File
 touch ContactLoggingProviders/BuilderExtensions.cs
 ```
 
+Add code that clears all default providers then in development environment, configures only the providers that we actually want:
+
 BuilderExtensions.cs
 
 ```cs
@@ -71,6 +73,28 @@ public static class BuilderExtensions
         {
             builder.Logging.AddConsole();
             builder.Logging.AddDebug();
+        }
+
+        return builder;
+    }
+}
+```
+
+Another approach would be to clear the default providers configured by the framework only when not in development environment:
+
+BuilderExtensions.cs
+
+```cs
+namespace Microsoft.Extensions.Hosting;
+
+public static class BuilderExtensions
+{
+    public static TBuilder AddLoggingProviders<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+
+        if (!builder.Environment.IsDevelopment())
+        {
+            builder.Logging.ClearProviders();
         }
 
         return builder;
