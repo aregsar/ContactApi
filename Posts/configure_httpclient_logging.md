@@ -66,6 +66,10 @@ builder.Services.AddExtendedHttpClientLogging(options =>
     options.ResponseBodyContentTypes.Add("application/json");
 });
 
+//add a basic unnamed and untyped HttpClient factory
+//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
+builder.Services.AddHttpClient();
+
 // builder.Services.AddHttpClient<MyApiClient>();
 // builder.Services.AddHttpClient("MyNamedApiClient")
 //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
@@ -80,10 +84,14 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/client", () => {
-    //TODO: Create a HttpClient and make a request to root URL
-    //MyApiClient client = new();
-    //client.Get("/");
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient();
+
+    //make a request to root URL
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/");
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
 
 });
 
