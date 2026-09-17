@@ -20,6 +20,7 @@ dotnet package add Microsoft.Extensions.Http.Diagnostics --project ContactOpenTe
 
 
 
+
 dotnet package add Microsoft.Extensions.Diagnostics.Enrichment
 #for builder.Services.AddHttpLogEnricher<CustomHttpLogEnricher>();
 dotnet package add Microsoft.AspNetCore.Diagnostics.Middleware
@@ -174,7 +175,13 @@ public static class BuilderExtensions
 
         //configure all Http Clients
         //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
-        builder.Services.AddExtendedHttpClientLogging(options => {});
+        builder.Services.AddExtendedHttpClientLogging((LoggingOptions options) =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                options.LogBody = true;
+            }
+        });
 
         // //configure Named Http Client
         // builder.Services.AddOptions<LoggingOptions>("PaymentGateway")
@@ -474,3 +481,15 @@ app.MapGet("/client", () => {
 
 app.Run();
 ```
+
+### Testing the HttpClient logging
+
+Run the project:
+
+```bash
+dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+```
+
+Send Requests using the .http file
+
+Check the console logs to see the HttpClient log output

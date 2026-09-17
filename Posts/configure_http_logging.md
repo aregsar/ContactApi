@@ -136,7 +136,7 @@ public static class BuilderExtensions
 
         //The AddHttpLogging implicitly picks up the bound HttpLoggingOptions under the hood and
         //in development mode overrides the some of the settings in code.
-        builder.Services.AddHttpLogging(options =>
+        builder.Services.AddHttpLogging((HttpLoggingOptions options) =>
         {
             if (builder.Environment.IsDevelopment())
             {
@@ -405,3 +405,15 @@ appsettings.json:
   }
 }
 ```
+
+### Testing the Http logging
+
+Run the project:
+
+```bash
+dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
+```
+
+Send Requests using the .http file
+
+Check the console logs to see the Http request log output
