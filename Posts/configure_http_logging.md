@@ -162,9 +162,9 @@ public static class BuilderExtensions
 ```
 
 > builder.Services.AddOptions<HttpLoggingOptions>().BindConfiguration() loads the settings in the appsettings.json into a HttpLoggingOptions object.
-Then under the hood the builder.Services.AddHttpLogging call uses the HttpLoggingOptions object.
+Then under the hood the builder.Services.AddHttpLogging call uses the bound HttpLoggingOptions object.
 The AddHttpLogging<TBuilder> extension method of the builder wraps these two method calls to make their relationship explicit and encapsulated.
-Otherwise the asp.net framework does not provide any indication that the two calls are related.
+Otherwise the asp.net framework does not provide any indication that the builder.Services.AddOptions<HttpLoggingOptions>().BindConfiguration()  call and  the builder.Services.AddHttpLogging call are related.
 
 Update Program.cs to use the builder.AddHttpLogging() extension method instead of builder.Services.AddHttpLogging().
 

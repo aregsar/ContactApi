@@ -43,6 +43,7 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Register the required redaction services
 builder.Services.AddRedaction();
 builder.Services.AddExtendedHttpClientLogging(options =>
 {
@@ -64,9 +65,14 @@ builder.Services.AddExtendedHttpClientLogging(options =>
     options.ResponseBodyContentTypes.Add("application/json");
 });
 
-builder.Services.AddHttpClient<MyApiClient>();
-builder.Services.AddHttpClient("MyNamedApiClient")
-    .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
+// builder.Services.AddHttpClient<MyApiClient>();
+// builder.Services.AddHttpClient("MyNamedApiClient")
+//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
+
+// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
+// {
+//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+// });
 
 
 var app = builder.Build();
@@ -91,6 +97,12 @@ Load the settings for AddExtendedHttpClientLogging.
 
 ```json
 {
+"Logging": {
+    "LogLevel": {
+        "Default": "Information",
+        "System.Net.Http.HttpClient": "Information"
+    }
+},
 "HttpClientLogging": {
     "LogRequestStart": true,
     "LogBody": true,
@@ -154,6 +166,9 @@ public static class BuilderExtensions
 {
     private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
+        // Register the required redaction services
+        builder.Services.AddRedaction();
+
         //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
         builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
 
@@ -176,13 +191,56 @@ public static class BuilderExtensions
         return builder;
     }
 }
-
 ```
+
+> builder.Services.AddOptions<LoggingOptions>().BindConfiguration() loads the settings in the appsettings.json into a LoggingOptions object.
+Then under the hood the builder.Services.AddExtendedHttpClientLogging call uses the bound LoggingOptions object.
+The AddHttpClientLogging<TBuilder> extension method of the builder wraps these two method calls to make their relationship explicit and encapsulated.
+Otherwise the asp.net framework does not provide any indication that the builder.Services.AddOptions<LoggingOptions>().BindConfiguration() call and builder.Services.AddExtendedHttpClientLogging call are related.
+
+Update Program.cs to use the builder.AddHttpClientLogging() extension method instead of builder.Services.AddExtendedHttpClientLogging().
+
+Also moved the builder.Services.AddRedaction() call into builder.AddHttpClientLogging().
 
 Program.cs
 
 ```cs
-//TODO: switch to using BuilderExtensions AddHttpClientLogging() extension method
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddHttpClientLogging();
+
+
+// builder.Services.AddHttpClient<MyApiClient>();
+// builder.Services.AddHttpClient("MyNamedApiClient")
+//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
+
+// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
+// {
+//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+// });
+
+
+var app = builder.Build();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/client", () => {
+    //TODO: Create a HttpClient and make a request to root URL
+    //MyApiClient client = new();
+    //client.Get("/");
+
+});
+
+app.Run();
 ```
 
 ### Adding HttpClient Enrichment
