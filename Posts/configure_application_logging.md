@@ -66,10 +66,17 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Turn on the enrichment subsystem (required for all enrichers)
 //dotnet package add Microsoft.Extensions.Telemetry --project xxxxx
+//Activated on the logging engine to tell the application to attach diagnostic metadata to outgoing logs.
+//required for builder.Services.AddApplicationLogEnricher()
 builder.Logging.EnableEnrichment();
 
 // Load from configuration AND apply code overrides
 builder.Services.AddApplicationLogEnricher(builder.Configuration.GetSection("ApplicationLogEnricherOptions"));
+
+//required for application log redaction
+builder.Services.AddRedaction();
+//builder.Logging.EnableRedaction needs builder.Services.AddRedaction registered redaction services
+builder.Logging.EnableRedaction();
 
 var app = builder.Build();
 

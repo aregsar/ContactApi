@@ -491,9 +491,11 @@ builder.Services.AddHttpClient();
 // });
 
 
-//enables enrichment subsystem
-//Is this required for httpclient enrichment ???
-//builder.Logging.EnableEnrichment();
+
+//Are these required for httpclient redaction ???
+//builder.Services.AddRedaction();
+//EnableRedaction needs AddRedaction
+//builder.Logging.EnableRedaction();
 
 builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
 
