@@ -69,11 +69,9 @@ builder.Services.AddExtendedHttpClientLogging(options =>
 //add a basic unnamed and untyped HttpClient factory
 //so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
 builder.Services.AddHttpClient();
-
-// builder.Services.AddHttpClient<MyApiClient>();
 // builder.Services.AddHttpClient("MyNamedApiClient")
 //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-
+// builder.Services.AddHttpClient<MyApiClient>();
 // builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
 // {
 //     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
@@ -115,7 +113,7 @@ Load the settings for AddExtendedHttpClientLogging.
 },
 "HttpClientLogging": {
     "LogRequestStart": true,
-    "LogBody": true,
+    "LogBody": false,
     "BodySizeLimit": 32768,
     "BodyReadTimeout": "00:00:01",
     "RequestPathLoggingMode": "Formatted",
@@ -139,15 +137,15 @@ Load the settings for AddExtendedHttpClientLogging.
     ]
   },
   "HttpClientLoggingNamedPaymentGateway": {
-    "LogBody": true,
+    "LogBody": false,
     "BodySizeLimit": 2048,
     "RequestHeadersDataClasses": {
       "Authorization": "Private",
       "X-Api-Key": "Private"
     }
   },
-  "HttpClientLoggingNamedTypedPaymentGateway": {
-    "LogBody": true,
+  "HttpClientLoggingTypedPaymentGateway": {
+    "LogBody": false,
     "BodySizeLimit": 65536,
     "RequestHeadersDataClasses": {
       "User-Agent": "None",
@@ -189,6 +187,7 @@ public static class BuilderExtensions
             if (builder.Environment.IsDevelopment())
             {
                 options.LogBody = true;
+                options.BodySizeLimit = "";
             }
         });
 
@@ -200,9 +199,16 @@ public static class BuilderExtensions
 
         // //configure Typed Http Client
         // builder.Services.AddOptions<LoggingOptions>(typeof(PaymentGatewayClient).FullName!)
-        //                 .BindConfiguration("HttpClientLoggingNamedTypedPaymentGateway");
+        //                 .BindConfiguration("HttpClientLoggingTypedPaymentGateway");
         // builder.Services.AddHttpClient<PaymentGatewayClient>().AddExtendedHttpClientLogging(options => {
         // });
+
+        // //configure Typed Http Client using Interface
+        // builder.Services.AddOptions<LoggingOptions>(typeof(IPaymentGatewayClient).FullName!)
+        //                 .BindConfiguration("HttpClientLoggingTypedPaymentGateway");
+        // builder.Services.AddHttpClient<IPaymentGatewayClient, PaymentGatewayClient>().AddExtendedHttpClientLogging(options => {
+        // });
+
 
         return builder;
     }
@@ -234,25 +240,31 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddHttpClientLogging();
 
-
-// builder.Services.AddHttpClient<MyApiClient>();
+//add a basic unnamed and untyped HttpClient factory
+//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
+builder.Services.AddHttpClient();
 // builder.Services.AddHttpClient("MyNamedApiClient")
 //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-
+// builder.Services.AddHttpClient<MyApiClient>();
 // builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
 // {
 //     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
 // });
 
-
 var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/client", () => {
-    //TODO: Create a HttpClient and make a request to root URL
-    //MyApiClient client = new();
-    //client.Get("/");
+
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient();
+
+    //make a request to root URL
+    //https://jsonplaceholder.typicode.com
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
 
 });
 
@@ -317,10 +329,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddHttpClientLogging();
 
 
-// builder.Services.AddHttpClient<MyApiClient>();
+//add a basic unnamed and untyped HttpClient factory
+//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
+builder.Services.AddHttpClient();
 // builder.Services.AddHttpClient("MyNamedApiClient")
 //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-
+// builder.Services.AddHttpClient<MyApiClient>();
 // builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
 // {
 //     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
@@ -337,10 +351,15 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/client", () => {
-    //TODO: Create a HttpClient and make a request to root URL
-    //MyApiClient client = new();
-    //client.Get("/");
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient();
+
+    //make a request to root URL
+    //https://jsonplaceholder.typicode.com
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
 
 });
 
@@ -454,15 +473,16 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddHttpClientLogging();
 
 
-// builder.Services.AddHttpClient<MyApiClient>();
+//add a basic unnamed and untyped HttpClient factory
+//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
+builder.Services.AddHttpClient();
 // builder.Services.AddHttpClient("MyNamedApiClient")
 //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-
+// builder.Services.AddHttpClient<MyApiClient>();
 // builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
 // {
 //     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-// })
-// .AddHttpMessageHandler(configure =>
+// }).AddHttpMessageHandler(configure =>
 // {
 //     var logger = configure.GetRequiredService<ILoggerFactory>()
 //         .CreateLogger("json-placeholder-todos");
@@ -481,10 +501,15 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");
 
-app.MapGet("/client", () => {
-    //TODO: Create a HttpClient and make a request to root URL
-    //MyApiClient client = new();
-    //client.Get("/");
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient();
+
+    //make a request to root URL
+    //https://jsonplaceholder.typicode.com
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
 
 });
 
