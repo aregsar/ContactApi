@@ -69,14 +69,6 @@ builder.Services.AddExtendedHttpClientLogging(options =>
 //add a basic unnamed and untyped HttpClient factory
 //so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
 builder.Services.AddHttpClient();
-// builder.Services.AddHttpClient("MyNamedApiClient")
-//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-// builder.Services.AddHttpClient<MyApiClient>();
-// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
-// {
-//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-// });
-
 
 var app = builder.Build();
 
@@ -91,7 +83,6 @@ app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
     //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
     var response = await client.GetAsync("http://localhost:5014/");
     return await response.Content.ReadAsStringAsync();
-
 });
 
 app.Run();
@@ -136,7 +127,7 @@ Load the settings for AddExtendedHttpClientLogging.
       "text/plain"
     ]
   },
-  "HttpClientLoggingNamedPaymentGateway": {
+  "NamedContactClientLogging": {
     "LogBody": false,
     "BodySizeLimit": 2048,
     "RequestHeadersDataClasses": {
@@ -144,7 +135,15 @@ Load the settings for AddExtendedHttpClientLogging.
       "X-Api-Key": "Private"
     }
   },
-  "HttpClientLoggingTypedPaymentGateway": {
+  "ContactClientLogging": {
+    "LogBody": false,
+    "BodySizeLimit": 65536,
+    "RequestHeadersDataClasses": {
+      "User-Agent": "None",
+      "Accept": "None"
+    }
+  },
+  "IContactClientLogging": {
     "LogBody": false,
     "BodySizeLimit": 65536,
     "RequestHeadersDataClasses": {
@@ -161,7 +160,6 @@ Add a BuilderExtensions.cs extension file:
 touch ContactHttpLogging/BuilderExtensions.cs
 ```
 
-TODO: add Builder extension to load httpclient settings and bind to a settings option class
 Add the following code to the BuilderExtensions.cs file:
 
 BuilderExtensions.cs
@@ -186,29 +184,11 @@ public static class BuilderExtensions
         {
             if (builder.Environment.IsDevelopment())
             {
+                //override settings in Development
                 options.LogBody = true;
                 options.BodySizeLimit = "";
             }
         });
-
-        // //configure Named Http Client
-        // builder.Services.AddOptions<LoggingOptions>("PaymentGateway")
-        //                 .BindConfiguration("HttpClientLoggingNamedPaymentGateway");
-        // builder.Services.AddHttpClient("PaymentGateway").AddExtendedHttpClientLogging(options => {
-        // });
-
-        // //configure Typed Http Client
-        // builder.Services.AddOptions<LoggingOptions>(typeof(PaymentGatewayClient).FullName!)
-        //                 .BindConfiguration("HttpClientLoggingTypedPaymentGateway");
-        // builder.Services.AddHttpClient<PaymentGatewayClient>().AddExtendedHttpClientLogging(options => {
-        // });
-
-        // //configure Typed Http Client using Interface
-        // builder.Services.AddOptions<LoggingOptions>(typeof(IPaymentGatewayClient).FullName!)
-        //                 .BindConfiguration("HttpClientLoggingTypedPaymentGateway");
-        // builder.Services.AddHttpClient<IPaymentGatewayClient, PaymentGatewayClient>().AddExtendedHttpClientLogging(options => {
-        // });
-
 
         return builder;
     }
@@ -240,16 +220,8 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddHttpClientLogging();
 
-//add a basic unnamed and untyped HttpClient factory
-//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
+// add IHttpClientFactory implementation to service container
 builder.Services.AddHttpClient();
-// builder.Services.AddHttpClient("MyNamedApiClient")
-//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-// builder.Services.AddHttpClient<MyApiClient>();
-// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
-// {
-//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-// });
 
 var app = builder.Build();
 
@@ -325,27 +297,11 @@ Program.cs:
 
 var builder = WebApplication.CreateBuilder(args);
 
-
 builder.AddHttpClientLogging();
-
-
-//add a basic unnamed and untyped HttpClient factory
-//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
-builder.Services.AddHttpClient();
-// builder.Services.AddHttpClient("MyNamedApiClient")
-//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-// builder.Services.AddHttpClient<MyApiClient>();
-// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
-// {
-//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-// });
-
-
-//enables enrichment subsystem
-//Is this required for httpclient enrichment ???
-//builder.Logging.EnableEnrichment();
-
 builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
+
+// add IHttpClientFactory implementation to service container
+builder.Services.AddHttpClient();
 
 var app = builder.Build();
 
@@ -366,7 +322,7 @@ app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
 app.Run();
 ```
 
-### Intercepting HttpClient requests for custom logging (Bonus)
+### Intercepting HttpClient requests for custom logging (bonus)
 
 Add a new file HttpLoggingHandler that will intercept httpclient requests
 
@@ -472,32 +428,18 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddHttpClientLogging();
 
-
-//add a basic unnamed and untyped HttpClient factory
-//so that asp.net automatically injects a IHttpClientFactory into ctors or methods if needed
-builder.Services.AddHttpClient();
-// builder.Services.AddHttpClient("MyNamedApiClient")
-//     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" });
-// builder.Services.AddHttpClient<MyApiClient>();
-// builder.Services.AddHttpClient<ITodoClient, TodoClient>(client =>
-// {
-//     client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-// }).AddHttpMessageHandler(configure =>
-// {
-//     var logger = configure.GetRequiredService<ILoggerFactory>()
-//         .CreateLogger("json-placeholder-todos");
-
-//     return new HttpLoggingHandler(logger);
-// });
-
-
-
-//Are these required for httpclient redaction ???
-//builder.Services.AddRedaction();
-//EnableRedaction needs AddRedaction
-//builder.Logging.EnableRedaction();
-
 builder.Services.AddHttpClientLogEnricher<CustomHttpClientLogEnricher>();
+
+// add IHttpClientFactory implementation to service container.
+builder.Services.AddHttpClient()
+                .AddHttpMessageHandler(configure =>
+{
+    var logger = configure.GetRequiredService<ILoggerFactory>()
+        .CreateLogger("json-placeholder-todos");
+
+    return new HttpLoggingHandler(logger);
+});
+
 
 var app = builder.Build();
 
@@ -529,3 +471,72 @@ dotnet run --project ContactOpenTelemetry/ContactOpenTelemetry.csproj
 Send Requests using the .http file
 
 Check the console logs to see the HttpClient log output
+
+### Overriding logging settings for Typed HttpClients
+
+BuilderExtensions.cs
+
+```cs
+//dotnet package add Microsoft.Extensions.Http.Diagnostics
+using Microsoft.Extensions.Http.Logging;
+using Microsoft.Extensions.DependencyInjection;
+public static class BuilderExtensions
+{
+    private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        // Register the required redaction services
+        builder.Services.AddRedaction();
+
+        //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
+        builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
+
+        //configure all Http Clients
+        //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
+        builder.Services.AddExtendedHttpClientLogging((LoggingOptions options) =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                options.LogBody = true;
+                options.BodySizeLimit = "";
+            }
+        });
+
+        // //configure Named Http Client
+        // builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("NamedContactClientLogging");
+        // builder.Services.AddHttpClient("ContactClient").AddExtendedHttpClientLogging(options => {
+        // });
+
+        // //configure Typed Http Client
+        // builder.Services.AddOptions<LoggingOptions>(typeof(ContactClient).FullName!).BindConfiguration("ContactClientLogging");
+        // builder.Services.AddHttpClient<ContactClient>().AddExtendedHttpClientLogging(options => {
+        // });
+
+        // //configure Typed Http Client using Interface
+        // builder.Services.AddOptions<LoggingOptions>(typeof(IContactClient).FullName!).BindConfiguration("IContactClientLogging");
+        // builder.Services.AddHttpClient<IContactClient, ContactClient>(
+        //         client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+        //     )AddExtendedHttpClientLogging(options => {
+        //     });
+        //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" })
+        //     .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+        //     .AddStandardResilienceHandler()
+        //     .Configure(options =>
+        //     {
+        //         // 1. Customize the Retry strategy
+        //         options.Retry.MaxRetryAttempts = 5;
+        //         options.Retry.Delay = TimeSpan.FromSeconds(2);
+        //         options.Retry.BackoffType = DelayBackoffType.Exponential;
+
+        //         // 2. Customize the Circuit Breaker
+        //         options.CircuitBreaker.FailureRatio = 0.5; // Trip if 50% fail
+        //         options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+
+        //         // 3. Customize Attempt Timeouts
+        //         options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+        //     });
+
+
+        return builder;
+    }
+}
+```
