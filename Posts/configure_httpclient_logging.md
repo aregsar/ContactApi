@@ -726,7 +726,7 @@ builder.Services.AddHttpClient("ContactClient", client =>
 });
 ```
 
-### Configuring the HttpClient Handler properties
+### Configuring the HttpClient Handler properties (bonus)
 
 We can add various HttpClient Handler properties such as resiliance, lifetime and redaction
 
