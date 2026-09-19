@@ -522,6 +522,24 @@ appsettings.json
 }
 ```
 
+Create a Typed Client
+
+```bash
+touch <Project Name>/ContactClient.cs
+```
+
+ContactClient.cs:
+
+```cs
+public class ContactClient(HttpClient httpClient)
+{
+    public async Task<string> GetAsync(string url)
+    {
+        return await httpClient.GetStringAsync(url);
+    }
+}
+```
+
 Add The typed Http client to the AddHttpClientLogging method while configuring the settings inline:
 
 BuilderExtensions.cs
@@ -559,6 +577,7 @@ public static class BuilderExtensions
         {
             client.BaseAddress = new Uri("http://localhost:5014/");
             client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.Timeout = TimeSpan.FromSeconds(30);
         }).AddExtendedHttpClientLogging((LoggingOptions options) => {
         });
 
@@ -584,12 +603,42 @@ builder.Services.AddHttpClient<ContactClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5014/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 ```
 
 ### Overriding logging settings for Typed HttpClients using Typed Interface
 
-Change the Typed Http Client in BuilderExtensions.AddHttpClientLogging to use an interface:
+Create a Typed Client Interface file
+
+```bash
+touch <Project Name>/IContactClient.cs
+```
+
+IContactClient.cs:
+
+```cs
+public interface ITodoService
+{
+    Task<string> GetAsync(string url)
+}
+```
+
+Update ContactClient.cs to use the Interface
+
+ContactClient.cs:
+
+```cs
+public class ContactClient(HttpClient httpClient) : IContactClient
+{
+    public async Task<string> GetAsync(string url)
+    {
+        return await httpClient.GetStringAsync(url);
+    }
+}
+```
+
+Update the Typed Http Client in BuilderExtensions.AddHttpClientLogging to use an interface:
 
 BuilderExtensions.cs
 
@@ -626,6 +675,7 @@ public static class BuilderExtensions
         {
             client.BaseAddress = new Uri("http://localhost:5014/");
             client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.Timeout = TimeSpan.FromSeconds(30);
         }).AddExtendedHttpClientLogging((LoggingOptions options) => {
         });
 
@@ -654,6 +704,7 @@ builder.Services.AddHttpClient<IContactClient, ContactClient>(client =>
 {
     client.BaseAddress = new Uri("http://localhost:5014/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 ```
 
@@ -691,10 +742,22 @@ public static class BuilderExtensions
         builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("ContactClientLogging");
         builder.Services.AddHttpClient("ContactClient", client =>
         {
+
+        // client.BaseAddress = new Uri(
+        // builder.Configuration.GetValue<string>("BaseAddress")
+        //     ?? throw new ConfigurationErrorsException(
+        //         "BaseAddress configuration value is missing."
+        //     )
+        // );
             client.BaseAddress = new Uri("http://localhost:5014/");
             client.DefaultRequestHeaders.Add("Accept", "application/json");
+            client.Timeout = TimeSpan.FromSeconds(30);
         }).AddExtendedHttpClientLogging((LoggingOptions options)  => {
         });
+
+
+
+
 
 
         return builder;
@@ -723,6 +786,7 @@ builder.Services.AddHttpClient("ContactClient", client =>
 {
     client.BaseAddress = new Uri("http://localhost:5014/");
     client.DefaultRequestHeaders.Add("Accept", "application/json");
+    client.Timeout = TimeSpan.FromSeconds(30);
 });
 ```
 
