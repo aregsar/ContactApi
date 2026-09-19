@@ -474,6 +474,166 @@ Check the console logs to see the HttpClient log output
 
 ### Overriding logging settings for Typed HttpClients
 
+Add a new ContactClientLogging section to root of appsettings.json.
+
+appsettings.json
+
+```json
+{
+"Logging": {
+    "LogLevel": {
+        "Default": "Information",
+        "System.Net.Http.HttpClient": "Information"
+    }
+},
+"HttpClientLogging": {
+    "LogRequestStart": true,
+    "LogBody": false,
+    "BodySizeLimit": 32768,
+    "BodyReadTimeout": "00:00:01",
+    "RequestPathLoggingMode": "Formatted",
+    "RequestPathParameterRedactionMode": "Strict",
+    "RequestHeadersDataClasses": {
+      "User-Agent": "None",
+      "Content-Type": "None",
+      "Authorization": "Private"
+    },
+    "ResponseHeadersDataClasses": {
+      "Content-Type": "None",
+      "Server": "None"
+    },
+    "RequestBodyContentTypes": [
+      "application/json",
+      "text/plain"
+    ],
+    "ResponseBodyContentTypes": [
+      "application/json",
+      "text/plain"
+    ]
+  },
+  "ContactClientLogging": {
+    "LogBody": false,
+    "BodySizeLimit": 65536,
+    "RequestHeadersDataClasses": {
+      "User-Agent": "None",
+      "Accept": "None"
+    }
+  }
+}
+```
+
+Add The typed Http client to the AddHttpClientLogging method while configuring the settings inline:
+
+BuilderExtensions.cs
+
+```cs
+//dotnet package add Microsoft.Extensions.Http.Diagnostics
+using Microsoft.Extensions.Http.Logging;
+using Microsoft.Extensions.DependencyInjection;
+public static class BuilderExtensions
+{
+    private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        // Register the required redaction services
+        builder.Services.AddRedaction();
+
+        //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
+        builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
+
+        //configure all Http Clients
+        //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
+        builder.Services.AddExtendedHttpClientLogging((LoggingOptions options) =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                options.LogBody = true;
+                options.BodySizeLimit = "";
+            }
+        });
+
+
+
+        // configure Typed Http Client
+        builder.Services.AddOptions<LoggingOptions>(typeof(ContactClient).FullName!).BindConfiguration("ContactClientLogging");
+        builder.Services.AddHttpClient<ContactClient>(
+                client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+            ).AddExtendedHttpClientLogging((LoggingOptions options) => {
+        });
+
+        return builder;
+    }
+}
+```
+
+we could inject this typed client instead of the IHttpClientFactory into the endpoint in Program.cs like so:
+
+```cs
+app.MapGet("/client", async (ContactClient client) => {
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
+});
+
+```
+
+### Overriding logging settings for Typed HttpClients using Typed Interface
+
+Change the Typed Http Client in BuilderExtensions.AddHttpClientLogging to use an interface:
+
+BuilderExtensions.cs
+
+```cs
+//dotnet package add Microsoft.Extensions.Http.Diagnostics
+using Microsoft.Extensions.Http.Logging;
+using Microsoft.Extensions.DependencyInjection;
+public static class BuilderExtensions
+{
+    private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        // Register the required redaction services
+        builder.Services.AddRedaction();
+
+        //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
+        builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
+
+        //configure all Http Clients
+        //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
+        builder.Services.AddExtendedHttpClientLogging((LoggingOptions options) =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                options.LogBody = true;
+                options.BodySizeLimit = "";
+            }
+        });
+
+
+
+        //configure Typed Http Client using Interface
+        builder.Services.AddOptions<LoggingOptions>(typeof(IContactClient).FullName!).BindConfiguration("ContactClientLogging");
+        builder.Services.AddHttpClient<IContactClient, ContactClient>(
+                client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
+            ).AddExtendedHttpClientLogging((LoggingOptions options) => {
+            });
+
+
+
+        return builder;
+    }
+}
+```
+
+we could inject this typed client interface instead of the implementation into the endpoint in Program.cs like so:
+
+```cs
+app.MapGet("/client", async (IContactClient client) => {
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
+});
+
+```
+
+### Overriding logging settings for Named HttpClients
+
 BuilderExtensions.cs
 
 ```cs
@@ -502,7 +662,62 @@ public static class BuilderExtensions
         });
 
         // //configure Named Http Client
-        // builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("NamedContactClientLogging");
+        // builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("ContactClientLogging");
+        // builder.Services.AddHttpClient("ContactClient").AddExtendedHttpClientLogging((LoggingOptions options)  => {
+        // });
+
+
+
+
+        return builder;
+    }
+}
+```
+
+We can use the IHttpClientFactory to instantiate the named client in Program.cs:
+
+```cs
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient("ContactClient");
+
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
+
+});
+```
+
+### Configuring the HttpClient
+
+BuilderExtensions.cs
+
+```cs
+//dotnet package add Microsoft.Extensions.Http.Diagnostics
+using Microsoft.Extensions.Http.Logging;
+using Microsoft.Extensions.DependencyInjection;
+public static class BuilderExtensions
+{
+    private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        // Register the required redaction services
+        builder.Services.AddRedaction();
+
+        //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
+        builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
+
+        //configure all Http Clients
+        //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
+        builder.Services.AddExtendedHttpClientLogging((LoggingOptions options) =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                options.LogBody = true;
+                options.BodySizeLimit = "";
+            }
+        });
+
+        // //configure Named Http Client
+        // builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("ContactClientLogging");
         // builder.Services.AddHttpClient("ContactClient").AddExtendedHttpClientLogging(options => {
         // });
 
@@ -512,10 +727,10 @@ public static class BuilderExtensions
         // });
 
         // //configure Typed Http Client using Interface
-        // builder.Services.AddOptions<LoggingOptions>(typeof(IContactClient).FullName!).BindConfiguration("IContactClientLogging");
+        // builder.Services.AddOptions<LoggingOptions>(typeof(IContactClient).FullName!).BindConfiguration("ContactClientLogging");
         // builder.Services.AddHttpClient<IContactClient, ContactClient>(
         //         client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-        //     )AddExtendedHttpClientLogging(options => {
+        //     )AddExtendedHttpClientLogging((LoggingOptions options)  => {
         //     });
         //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" })
         //     .SetHandlerLifetime(TimeSpan.FromMinutes(5))
