@@ -553,11 +553,13 @@ public static class BuilderExtensions
 
 
 
-        // configure Typed Http Client
+        // configure Typed Http Client overriding the global HttpClientLogging settings
         builder.Services.AddOptions<LoggingOptions>(typeof(ContactClient).FullName!).BindConfiguration("ContactClientLogging");
-        builder.Services.AddHttpClient<ContactClient>(
-                client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-            ).AddExtendedHttpClientLogging((LoggingOptions options) => {
+        builder.Services.AddHttpClient<ContactClient>(client =>
+        {
+            client.BaseAddress = new Uri("http://localhost:5014/");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        }).AddExtendedHttpClientLogging((LoggingOptions options) => {
         });
 
         return builder;
@@ -569,10 +571,20 @@ we could inject this typed client instead of the IHttpClientFactory into the end
 
 ```cs
 app.MapGet("/client", async (ContactClient client) => {
-    var response = await client.GetAsync("http://localhost:5014/");
+    var response = await client.GetAsync("/");
     return await response.Content.ReadAsStringAsync();
 });
+```
 
+Note that if we just want to use the default HttpClientLogging settings we need to do is add the HttpClient.
+No need for the `builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration()` call and no need for chaining the `AddExtendedHttpClientLogging` call to the `AddHttpClient` call.
+
+```cs
+builder.Services.AddHttpClient<ContactClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5014/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 ```
 
 ### Overriding logging settings for Typed HttpClients using Typed Interface
@@ -608,12 +620,14 @@ public static class BuilderExtensions
 
 
 
-        //configure Typed Http Client using Interface
+        //configure Typed Http Client using Interface overriding the global HttpClientLogging settings
         builder.Services.AddOptions<LoggingOptions>(typeof(IContactClient).FullName!).BindConfiguration("ContactClientLogging");
-        builder.Services.AddHttpClient<IContactClient, ContactClient>(
-                client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-            ).AddExtendedHttpClientLogging((LoggingOptions options) => {
-            });
+        builder.Services.AddHttpClient<IContactClient, ContactClient>(client =>
+        {
+            client.BaseAddress = new Uri("http://localhost:5014/");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        }).AddExtendedHttpClientLogging((LoggingOptions options) => {
+        });
 
 
 
@@ -626,10 +640,21 @@ we could inject this typed client interface instead of the implementation into t
 
 ```cs
 app.MapGet("/client", async (IContactClient client) => {
-    var response = await client.GetAsync("http://localhost:5014/");
+    var response = await client.GetAsync("/");
     return await response.Content.ReadAsStringAsync();
 });
 
+```
+
+Note that if we just want to use the default HttpClientLogging settings we need to do is add the HttpClient.
+No need for the `builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration()` call and no need for chaining the `AddExtendedHttpClientLogging` call to the `AddHttpClient` call.
+
+```cs
+builder.Services.AddHttpClient<IContactClient, ContactClient>(client =>
+{
+    client.BaseAddress = new Uri("http://localhost:5014/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
 ```
 
 ### Overriding logging settings for Named HttpClients
@@ -642,6 +667,7 @@ using Microsoft.Extensions.Http.Logging;
 using Microsoft.Extensions.DependencyInjection;
 public static class BuilderExtensions
 {
+
     private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
         // Register the required redaction services
@@ -661,12 +687,14 @@ public static class BuilderExtensions
             }
         });
 
-        // //configure Named Http Client
-        // builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("ContactClientLogging");
-        // builder.Services.AddHttpClient("ContactClient").AddExtendedHttpClientLogging((LoggingOptions options)  => {
-        // });
-
-
+        //configure Named Http Client overriding the global HttpClientLogging settings
+        builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("ContactClientLogging");
+        builder.Services.AddHttpClient("ContactClient", client =>
+        {
+            client.BaseAddress = new Uri("http://localhost:5014/");
+            client.DefaultRequestHeaders.Add("Accept", "application/json");
+        }).AddExtendedHttpClientLogging((LoggingOptions options)  => {
+        });
 
 
         return builder;
@@ -681,77 +709,79 @@ app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
 
     var client = _httpClientFactory.CreateClient("ContactClient");
 
-    var response = await client.GetAsync("http://localhost:5014/");
+    var response = await client.GetAsync("/");
     return await response.Content.ReadAsStringAsync();
 
 });
 ```
 
-### Configuring the HttpClient
-
-BuilderExtensions.cs
+Note that if we just want to use the default HttpClientLogging settings we need to do is add the HttpClient.
+No need for the `builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration()` call and no need for chaining the `AddExtendedHttpClientLogging` call to the `AddHttpClient` call.
 
 ```cs
-//dotnet package add Microsoft.Extensions.Http.Diagnostics
-using Microsoft.Extensions.Http.Logging;
-using Microsoft.Extensions.DependencyInjection;
-public static class BuilderExtensions
+builder.Services.AddHttpClient("ContactClient", client =>
 {
-    private static TBuilder AddHttpClientLogging<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
-    {
-        // Register the required redaction services
-        builder.Services.AddRedaction();
+    client.BaseAddress = new Uri("http://localhost:5014/");
+    client.DefaultRequestHeaders.Add("Accept", "application/json");
+});
+```
 
-        //Strongly typed binding of LoggingOptions to the custom configuration section HttpClientLogging in appsettings.json.
-        builder.Services.AddOptions<LoggingOptions>().BindConfiguration("HttpClientLogging");
+### Configuring the HttpClient Handler properties
 
-        //configure all Http Clients
-        //The AddExtendedHttpClientLogging implicitly picks up the bound LoggingOptions under the hood.
-        builder.Services.AddExtendedHttpClientLogging((LoggingOptions options) =>
-        {
-            if (builder.Environment.IsDevelopment())
-            {
-                options.LogBody = true;
-                options.BodySizeLimit = "";
-            }
-        });
+We can add various HttpClient Handler properties such as resiliance, lifetime and redaction
 
-        // //configure Named Http Client
-        // builder.Services.AddOptions<LoggingOptions>("ContactClient").BindConfiguration("ContactClientLogging");
-        // builder.Services.AddHttpClient("ContactClient").AddExtendedHttpClientLogging(options => {
-        // });
+Program.cs
 
-        // //configure Typed Http Client
-        // builder.Services.AddOptions<LoggingOptions>(typeof(ContactClient).FullName!).BindConfiguration("ContactClientLogging");
-        // builder.Services.AddHttpClient<ContactClient>().AddExtendedHttpClientLogging(options => {
-        // });
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
 
-        // //configure Typed Http Client using Interface
-        // builder.Services.AddOptions<LoggingOptions>(typeof(IContactClient).FullName!).BindConfiguration("ContactClientLogging");
-        // builder.Services.AddHttpClient<IContactClient, ContactClient>(
-        //         client.BaseAddress = new Uri("https://jsonplaceholder.typicode.com/");
-        //     )AddExtendedHttpClientLogging((LoggingOptions options)  => {
-        //     });
-        //     .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" })
-        //     .SetHandlerLifetime(TimeSpan.FromMinutes(5))
-        //     .AddStandardResilienceHandler()
-        //     .Configure(options =>
-        //     {
-        //         // 1. Customize the Retry strategy
-        //         options.Retry.MaxRetryAttempts = 5;
-        //         options.Retry.Delay = TimeSpan.FromSeconds(2);
-        //         options.Retry.BackoffType = DelayBackoffType.Exponential;
+var builder = WebApplication.CreateBuilder(args);
 
-        //         // 2. Customize the Circuit Breaker
-        //         options.CircuitBreaker.FailureRatio = 0.5; // Trip if 50% fail
-        //         options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+builder.AddHttpClientLogging();
 
-        //         // 3. Customize Attempt Timeouts
-        //         options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
-        //     });
+// add IHttpClientFactory implementation to service container
+builder.Services.AddHttpClient()
+                .RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" })
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                .AddStandardResilienceHandler()
+                .Configure(options =>
+                {
+                    // 1. Customize the Retry strategy
+                    options.Retry.MaxRetryAttempts = 5;
+                    options.Retry.Delay = TimeSpan.FromSeconds(2);
+                    options.Retry.BackoffType = DelayBackoffType.Exponential;
+
+                    // 2. Customize the Circuit Breaker
+                    options.CircuitBreaker.FailureRatio = 0.5; // Trip if 50% fail
+                    options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+
+                    // 3. Customize Attempt Timeouts
+                    options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+                });
+
+var app = builder.Build();
+
+app.MapGet("/", () => "Hello World!");
 
 
-        return builder;
-    }
-}
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient();
+
+    //make a request to root URL
+    //https://jsonplaceholder.typicode.com
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
+
+});
+
+app.Run();
 ```
