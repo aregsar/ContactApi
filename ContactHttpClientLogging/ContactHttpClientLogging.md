@@ -1,3 +1,5 @@
+# ContactHttpClientLogging
+
 ## Configure Http Logging
 
 ### Create the project boilerplate

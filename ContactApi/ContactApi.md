@@ -1,3 +1,5 @@
+# ContactApi
+
 ## Creating a minimal Minimal API project boilerplate
 
 In this post we will create the most basic Minimal API project that has a single endpoint mapped to the root URL of the API.
@@ -24,7 +26,7 @@ cd ContactApi
 Optionally add a .gitignore and README.md file to the solution:
 
 ```bash
-dotnet new gitignore
+dotnet new .gitignore
 echo "# ContactApi" >> README.md
 ```
 

@@ -1,3 +1,5 @@
+# ContactOpenTelemetry
+
 ## Configure OpenTelemetry
 
 ### Create the project boilerplate

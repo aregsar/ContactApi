@@ -1,3 +1,5 @@
+# ContactLoggingProviders
+
 ## Configure Logging Providers
 
 In this post we will override the default logging providers to create our own efficient logging configuration.
