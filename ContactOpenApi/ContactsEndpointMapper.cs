@@ -22,10 +22,12 @@ public static class ContactsEndpointMapper
                                                   CancellationToken token,
                                                   ILogger<ContactsEndpoint> logger)
     {
-        return TypedResults.Ok(await db.Contacts.Select(contact => new ContactResource(contact.Id,
-                                                                    contact.FirstName,
-                                                                    contact.LastName,
-                                                                    contact.Email)).ToArrayAsync(token));
+        return TypedResults.Ok(await db.Contacts
+                                        .Select(contact => new ContactResource(contact.Id,
+                                                                                contact.FirstName,
+                                                                                contact.LastName,
+                                                                                contact.Email))
+                                        .ToArrayAsync(token));
     }
 
     static async Task<Results<Ok<ContactResource>, NotFound>> Get(int id,
