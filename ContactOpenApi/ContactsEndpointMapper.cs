@@ -8,10 +8,10 @@ public static class ContactsEndpointMapper
 
     public static void Map(WebApplication app)
     {
-        var contacts = app.MapGroup("/contacts").WithTags("Contacts").RequireAuthorization();
+        var contacts = app.MapGroup("/contacts").WithTags("Contacts");//.RequireAuthorization();
 
-        contacts.MapGet("/list", List).WithName("Contacts.List").WithSummary("").AllowAnonymous();
-        contacts.MapGet("/get/{id}", Get).WithName("Contacts.Get").WithSummary("").AllowAnonymous();
+        contacts.MapGet("/list", List).WithName("Contacts.List").WithSummary("");//.AllowAnonymous();
+        contacts.MapGet("/get/{id}", Get).WithName("Contacts.Get").WithSummary("");//.AllowAnonymous();
         contacts.MapPost("/post", Post).WithName("Contacts.Post").WithSummary("");
         contacts.MapPut("/put/{id}", Put).WithName("Contacts.Put").WithSummary("");
         contacts.MapPatch("/patch/{id}", Patch).WithName("Contacts.Patch").WithSummary("");
@@ -20,7 +20,7 @@ public static class ContactsEndpointMapper
 
     static async Task<Ok<ContactResource[]>> List(ContactDbContext db,
                                                   CancellationToken token,
-                                                  ILogger<ContactsEndpoint> logger)
+                                                  ILogger<Program> logger)
     {
         return TypedResults.Ok(await db.Contacts
                                         .Select(contact => new ContactResource(contact.Id,
@@ -33,7 +33,7 @@ public static class ContactsEndpointMapper
     static async Task<Results<Ok<ContactResource>, NotFound>> Get(int id,
                                                                     ContactDbContext db,
                                                                     CancellationToken token,
-                                                                    ILogger<ContactsEndpoint> logger)
+                                                                    ILogger<Program> logger)
     {
         var contact = await db.Contacts.FindAsync(id, token);
 
@@ -45,7 +45,7 @@ public static class ContactsEndpointMapper
     static async Task<CreatedAtRoute<ContactResource>> Post(CreateContactRequestData contactData,
                                                         ContactDbContext db,
                                                         CancellationToken token,
-                                                        ILogger<ContactsEndpoint> logger)
+                                                        ILogger<Program> logger)
     {
         var contact = new Contact
         {
@@ -66,7 +66,7 @@ public static class ContactsEndpointMapper
                                                         UpdateContactRequestData contactData,
                                                         ContactDbContext db,
                                                         CancellationToken token,
-                                                        ILogger<ContactsEndpoint> logger)
+                                                        ILogger<Program> logger)
     {
         var contact = await db.Contacts.FindAsync(id);
 
@@ -88,7 +88,7 @@ public static class ContactsEndpointMapper
                                                             PatchContactRequestData contactData,
                                                             ContactDbContext db,
                                                             CancellationToken token,
-                                                            ILogger<ContactsEndpoint> logger)
+                                                            ILogger<Program> logger)
     {
         var contact = await db.Contacts.FindAsync(id, token);
 
@@ -109,7 +109,7 @@ public static class ContactsEndpointMapper
     static async Task<Results<NotFound, NoContent>> Delete(int id,
                                                             ContactDbContext db,
                                                             CancellationToken token,
-                                                            ILogger<ContactsEndpoint> logger)
+                                                            ILogger<Program> logger)
     {
         if (await db.Contacts.FindAsync(id, token) is Contact contact)
         {

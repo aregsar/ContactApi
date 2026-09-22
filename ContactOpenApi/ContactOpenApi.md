@@ -13,3 +13,9 @@ touch ContactOpenApi/Contact.cs
 touch ContactOpenApi/ContactsEndpointMapper.cs
 touch ContactOpenApi/ContactDbContext.cs
 ```
+
+```bash
+dotnet run --project ContactOpenApi/ContactOpenApi.csproj --launch-profile http
+# http://localhost:5037/openapi/v1.json
+# http://localhost:5037/scalar/
+```
