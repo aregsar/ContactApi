@@ -8,14 +8,14 @@ public static class ContactsEndpointMapper
 
     public static void Map(WebApplication app)
     {
-        var contacts = app.MapGroup("/contacts").WithTags("Contacts");
+        var contacts = app.MapGroup("/contacts").WithTags("Contacts").RequireAuthorization();
 
-        contacts.MapGet("/list", List).WithName("Contacts.List");
-        contacts.MapGet("/get/{id}", Get).WithName("Contacts.Get");
-        contacts.MapPost("/post", Post).WithName("Contacts.Post");
-        contacts.MapPut("/put/{id}", Put).WithName("Contacts.Put");
-        contacts.MapPatch("/patch/{id}", Patch).WithName("Contacts.Patch");
-        contacts.MapDelete("/delete/{id}", Delete).WithName("Contacts.Delete");
+        contacts.MapGet("/list", List).WithName("Contacts.List").WithSummary("").AllowAnonymous();
+        contacts.MapGet("/get/{id}", Get).WithName("Contacts.Get").WithSummary("").AllowAnonymous();
+        contacts.MapPost("/post", Post).WithName("Contacts.Post").WithSummary("");
+        contacts.MapPut("/put/{id}", Put).WithName("Contacts.Put").WithSummary("");
+        contacts.MapPatch("/patch/{id}", Patch).WithName("Contacts.Patch").WithSummary("");
+        contacts.MapDelete("/delete/{id}", Delete).WithName("Contacts.Delete").WithSummary("");
     }
 
     static async Task<Ok<ContactResource[]>> List(ContactDbContext db,
@@ -35,13 +35,14 @@ public static class ContactsEndpointMapper
                                                                     CancellationToken token,
                                                                     ILogger<ContactsEndpoint> logger)
     {
-        return await db.Contacts.FindAsync(id, token)
-            is Contact contact
+        var contact = await db.Contacts.FindAsync(id, token);
+
+        return contact is not null
                 ? TypedResults.Ok(new ContactResource(contact.Id, contact.FirstName, contact.LastName, contact.Email))
                 : TypedResults.NotFound();
     }
 
-    static async Task<Created<ContactResource>> Post(CreateContactRequestData contactData,
+    static async Task<CreatedAtRoute<ContactResource>> Post(CreateContactRequestData contactData,
                                                         ContactDbContext db,
                                                         CancellationToken token,
                                                         ILogger<ContactsEndpoint> logger)
@@ -58,7 +59,7 @@ public static class ContactsEndpointMapper
 
         var contactResource = new ContactResource(contact.Id, contact.FirstName, contact.LastName, contact.Email);
 
-        return TypedResults.Created($"/contacts/{contactResource.Id}", contactResource);
+        return TypedResults.CreatedAtRoute(contactResource, "Contacts.Get", new { id = contactResource.Id });
     }
 
     static async Task<Results<NotFound, NoContent>> Put(int id,
