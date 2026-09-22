@@ -2,11 +2,6 @@
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
-public record ContactResource(int Id, string FirstName, string? LastName, string Email);
-public record CreateContactRequestData(string FirstName, string? LastName, string Email);
-public record UpdateContactRequestData(string FirstName, string? LastName, string Email);
-
-
 public static class ContactsEndpointMapper
 {
     private class ContactsEndpoint { };
@@ -33,9 +28,10 @@ public static class ContactsEndpointMapper
                                                                     contact.Email)).ToArrayAsync(token));
     }
 
-    static async Task<Results<Ok<ContactResource>, NotFound>> Get(int id, ContactDbContext db,
-                                                    CancellationToken token,
-                                                    ILogger<ContactsEndpoint> logger)
+    static async Task<Results<Ok<ContactResource>, NotFound>> Get(int id,
+                                                                    ContactDbContext db,
+                                                                    CancellationToken token,
+                                                                    ILogger<ContactsEndpoint> logger)
     {
         return await db.Contacts.FindAsync(id, token)
             is Contact contact
@@ -43,10 +39,10 @@ public static class ContactsEndpointMapper
                 : TypedResults.NotFound();
     }
 
-    static async Task<IResult> Post(CreateContactRequestData contactData,
-                                    ContactDbContext db,
-                                    CancellationToken token,
-                                    ILogger<ContactsEndpoint> logger)
+    static async Task<Created<ContactResource>> Post(CreateContactRequestData contactData,
+                                                        ContactDbContext db,
+                                                        CancellationToken token,
+                                                        ILogger<ContactsEndpoint> logger)
     {
         var contact = new Contact
         {
@@ -85,26 +81,39 @@ public static class ContactsEndpointMapper
         return TypedResults.NoContent();
     }
 
-    static async Task<IResult> Patch(int id, TodoPatchDto inputTodo, ContactDbContext db)
+    static async Task<Results<NotFound, NoContent>> Patch(int id,
+                                                            PatchContactRequestData contactData,
+                                                            ContactDbContext db,
+                                                            CancellationToken token,
+                                                            ILogger<ContactsEndpoint> logger)
     {
-        var todo = await db.Todos.FindAsync(id);
+        var contact = await db.Contacts.FindAsync(id, token);
 
-        if (todo is null) return TypedResults.NotFound();
+        if (contact is null)
+        {
+            return TypedResults.NotFound();
+        }
 
-        if (inputTodo.Name is not null) todo.Name = inputTodo.Name;
-        if (inputTodo.IsComplete is not null) todo.IsComplete = inputTodo.IsComplete.Value;
+        if (contactData.FirstName is not null) contact.FirstName = contactData.FirstName;
+        if (contactData.LastName is not null) contact.LastName = contactData.LastName;
+        if (contactData.Email is not null) contact.Email = contactData.Email;
 
-        await db.SaveChangesAsync();
+        await db.SaveChangesAsync(token);
 
         return TypedResults.NoContent();
     }
 
-    static async Task<IResult> Delete(int id, ContactDbContext db)
+    static async Task<Results<NotFound, NoContent>> Delete(int id,
+                                                            ContactDbContext db,
+                                                            CancellationToken token,
+                                                            ILogger<ContactsEndpoint> logger)
     {
-        if (await db.Todos.FindAsync(id) is Todo todo)
+        if (await db.Contacts.FindAsync(id, token) is Contact contact)
         {
-            db.Todos.Remove(todo);
-            await db.SaveChangesAsync();
+            db.Contacts.Remove(contact);
+
+            await db.SaveChangesAsync(token);
+
             return TypedResults.NoContent();
         }
 
