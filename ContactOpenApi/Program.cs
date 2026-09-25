@@ -25,13 +25,21 @@ var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    var defaultToken = builder.Configuration["Authentication:JwtToken"] ?? "";
+
     app.MapOpenApi();
-    app.MapScalarApiReference();
-    // app.MapScalarApiReference(options =>
-    // {
-    //     // Changes the default /scalar URL to /docs/v1
-    //     options.WithEndpointPrefix("/docs/{documentName}");
-    // });
+    // Pass your custom prefix here as a direct string parameter!
+    //app.MapScalarApiReference("/my-custom-docs", options =>
+    app.MapScalarApiReference(options =>
+    {
+        options.WithTitle("Contacts API")
+                .AddPreferredSecuritySchemes("BearerAuth");
+
+        options.AddHttpAuthentication("BearerAuth", auth =>
+        {
+            auth.Token = defaultToken;
+        });
+    });
 }
 
 app.UseAuthentication();
