@@ -24,7 +24,21 @@ touch ContactOpenApi/BearerOperationTransformer.cs
 ```bash
 dotnet run --project ContactOpenApi/ContactOpenApi.csproj --launch-profile http
 
-dotnet user-jwts create
 # http://localhost:5037/openapi/v1.json
 # http://localhost:5037/scalar/
+
+
+dotnet user-secrets init
+dotnet user-jwts create
+#dotnet user-jwts create --issuer "MyLocalIdentityServer" --audience "MySecureBackendApi" --role "Admin"
+dotnet user-secrets set "Authentication:JwtToken" "PASTE_YOUR_COPIED_JWT_HERE"
+
+
+dotnet user-secrets set "Authentication:JwtSigningKey" "SuperSecretLocalDevelopmentSigningKey2026!"
+
+# 3. Define the trusted local issuer name
+dotnet user-secrets set "Authentication:Issuer" "MyLocalIdentityServer"
+
+# 4. Define the target audience matching your local web API
+dotnet user-secrets set "Authentication:Audience" "MySecureBackendApi"
 ```
