@@ -1,13 +1,25 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ContactDbContext>(opt => opt.UseInMemoryDatabase("Contacts"));
-builder.Services.AddOpenApi();
 
-// builder.Services.AddAuthentication();
-// builder.Services.AddAuthorization();
+
+builder.Services.AddOpenApi(options =>
+{
+    // Registers the 'BearerAuth' definition globally
+    options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
+
+    // Checks every endpoint and conditionally hooks up the requirement
+    options.AddOperationTransformer<BearerOperationTransformer>();
+});
+
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer();
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
@@ -22,8 +34,8 @@ if (app.Environment.IsDevelopment())
     // });
 }
 
-// app.UseAuthentication();
-// app.UseAuthorization();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/", () => "Hello World!");
 ContactsEndpointMapper.Map(app);
