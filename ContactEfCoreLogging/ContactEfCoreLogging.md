@@ -17,14 +17,14 @@ dotnet sln ContactApi.slnx add ContactEfCoreLogging/ContactEfCoreLogging.csproj
 ### Add Required Packages
 
 ```bash
-dotnet package add Microsoft.EntityFrameworkCore.InMemory --project ContactEfCoreLogging/ContactOpenApi.csproj
-dotnet package add Microsoft.AspNetCore.OpenApi --project ContactEfCoreLogging/ContactOpenApi.csproj
-dotnet package add Scalar.AspNetCore --project ContactEfCoreLogging/ContactOpenApi.csproj
+dotnet package add Microsoft.EntityFrameworkCore.InMemory --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
+dotnet package add Microsoft.AspNetCore.OpenApi --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
+dotnet package add Scalar.AspNetCore --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
 
-dotnet package add Microsoft.EntityFrameworkCore.Sqlite --project ContactEfCoreLogging/ContactOpenApi.csproj
-dotnet package add Npgsql.EntityFrameworkCore.PostgreSQL --project ContactEfCoreLogging/ContactOpenApi.csproj
-dotnet package add Pomelo.EntityFrameworkCore.MySql --project ContactEfCoreLogging/ContactOpenApi.csproj
-dotnet package add Microsoft.EntityFrameworkCore.SqlServer --project ContactEfCoreLogging/ContactOpenApi.csproj
+dotnet package add Microsoft.EntityFrameworkCore.Sqlite --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
+dotnet package add Microsoft.EntityFrameworkCore.SqlServer --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
+dotnet package add Npgsql.EntityFrameworkCore.PostgreSQL --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
+dotnet package add Pomelo.EntityFrameworkCore.MySql --project ContactEfCoreLogging/ContactEfCoreLogging.csproj
 
 
 
