@@ -75,6 +75,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapGet("/", () => "Hello World!");
+
 ContactsEndpointMapper.Map(app);
 
 app.Run();
