@@ -25,6 +25,7 @@ public sealed class BearerOperationTransformer : IOpenApiOperationTransformer
 
         // 3. Document the specific security scheme requirement (the Lock Icon)
         operation.Security ??= new List<OpenApiSecurityRequirement>();
+        //Note BearerAuth string must match the string in AddPreferredSecuritySchemes in Program.cs
         var schemeReference = new OpenApiSecuritySchemeReference("BearerAuth", context.Document);
         var requirement = new OpenApiSecurityRequirement
         {

@@ -61,13 +61,18 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference(options =>
     {
         options.WithTitle("Contacts API")
+                //    .WithTheme(ScalarTheme.DeepSpace)
+                //Note BearerAuth string must match the string in AddHttpAuthentication
                 .AddPreferredSecuritySchemes("BearerAuth");
 
+        //Adapts the UI input fields based on the specified scheme (scalar version 2)
+        //Note BearerAuth string must match the string in AddPreferredSecuritySchemes
         options.AddHttpAuthentication("BearerAuth", auth =>
         {
             auth.Token = builder.Configuration["Authentication:JwtToken"];
             //auth.Token = jwtSettings.JwtToken;
         });
+
     });
 }
 
