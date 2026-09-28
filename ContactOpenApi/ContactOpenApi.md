@@ -1,6 +1,21 @@
 # ContactOpenApi
 
-Packages installed:
+## Configure Http Logging
+
+### Create the project boilerplate
+
+Use the project boilerplate from Creating a minimal Minimal API project boilerplate post
+
+```bash
+cd ContactOpenApi
+dotnet new web -o ContactOpenApi
+dotnet sln ContactApi.slnx add ContactOpenApi/ContactOpenApi.csproj
+echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+```
+
+> All following commands will be run from the solution root directory
+
+### Add Required Packages
 
 ```bash
 dotnet package add Microsoft.EntityFrameworkCore.InMemory --project ContactOpenApi/ContactOpenApi.csproj
@@ -11,15 +26,28 @@ dotnet package add Microsoft.OpenApi --project ContactOpenApi/ContactOpenApi.csp
 
 ```
 
+## Add the Contacts API
+
 ```bash
 touch ContactOpenApi/Contact.cs
 touch ContactOpenApi/ContactsEndpointMapper.cs
 touch ContactOpenApi/ContactDbContext.cs
+```
 
+## Add the OpenAPI services and middleware
 
+```cs
+//Program.cs file
+```
+
+## Add the OpenAPI security document transformers
+
+```bash
 touch ContactOpenApi/BearerSecuritySchemeTransformer.cs
 touch ContactOpenApi/BearerOperationTransformer.cs
 ```
+
+## Testing the Scalar UI interface
 
 ```bash
 dotnet run --project ContactOpenApi/ContactOpenApi.csproj --launch-profile http
