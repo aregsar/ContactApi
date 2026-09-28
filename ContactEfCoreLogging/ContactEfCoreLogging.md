@@ -26,10 +26,49 @@ dotnet package add Npgsql.EntityFrameworkCore.PostgreSQL --project ContactEfCore
 dotnet package add Pomelo.EntityFrameworkCore.MySql --project ContactEfCoreLogging/ContactOpenApi.csproj
 dotnet package add Microsoft.EntityFrameworkCore.SqlServer --project ContactEfCoreLogging/ContactOpenApi.csproj
 
-.UseSqlite()
-.UseSqlServer()
-.UseNpgsql()
-.UseMySql()
+
+
+```
+
+```cs
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+{
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // options.UseMySql(builder.Configuration.GetConnectionString("DefaultConnection"));
+    // options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+
+    if (builder.Environment.IsDevelopment())
+    {
+        options.EnableSensitiveDataLogging()
+               .EnableDetailedErrors();
+    }
+});
+
+
+```
+
+## Add logging levels in settings
+
+```json
+
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Warning",
+      "Microsoft.EntityFrameworkCore": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Command": "Information",
+      "Microsoft.EntityFrameworkCore.Database.Connection": "Warning",
+      "Microsoft.EntityFrameworkCore.Database.Transaction": "Warning",
+      "Microsoft.EntityFrameworkCore.ChangeTracking": "Information",
+      "Microsoft.EntityFrameworkCore.Infrastructure": "Warning",
+      "Microsoft.EntityFrameworkCore.Query": "None",
+      "Microsoft.EntityFrameworkCore.Model": "None",
+      "Microsoft.EntityFrameworkCore.Migrations": "Warning"
+    }
+  }
+}
 
 ```
 
