@@ -22,7 +22,9 @@ dotnet package add Microsoft.EntityFrameworkCore.InMemory --project ContactOpenA
 dotnet package add Microsoft.AspNetCore.OpenApi --project ContactOpenApi/ContactOpenApi.csproj
 dotnet package add Scalar.AspNetCore --project ContactOpenApi/ContactOpenApi.csproj
 dotnet package add Microsoft.AspNetCore.Authentication.JwtBearer --project ContactOpenApi/ContactOpenApi.csproj
-dotnet package add Microsoft.OpenApi --project ContactOpenApi/ContactOpenApi.csproj
+
+# Microsoft.AspNetCore.OpenApi package will install Microsoft.OpenApi package as a dependancy
+#dotnet package add Microsoft.OpenApi --project ContactOpenApi/ContactOpenApi.csproj
 
 ```
 
