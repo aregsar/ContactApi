@@ -1,7 +1,15 @@
 using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (!builder.Environment.IsDevelopment())
+{
+    //In non development environments we only rely on OpenTelemetry Logging provider
+    builder.Logging.ClearProviders();
+}
+
 builder.AddOpenTelemetry();
+
 var app = builder.Build();
 
 app.MapGet("/", () => "Hello World!");

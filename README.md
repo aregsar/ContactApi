@@ -46,22 +46,33 @@ echo "# ContactEfCoreLogging" >> ContactEfCoreLogging/ContactEfCoreLogging.md
 
 
 dotnet new web -o ContactUseStatusCodes
-echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+dotnet sln ContactUseStatusCodes.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
+echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
 
 dotnet new web -o ContactUseExceptions
-echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+dotnet sln ContactUseExceptions.slnx add ContactUseExceptions/ContactUseExceptions.csproj
+echo "# ContactUseExceptions" >> ContactUseExceptions/ContactUseExceptions.md
 
 dotnet new web -o ContactGlobalExceptions
-echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+dotnet sln ContactGlobalExceptions.slnx add ContactGlobalExceptions/ContactGlobalExceptions.csproj
+echo "# ContactGlobalExceptions" >> ContactGlobalExceptions/ContactGlobalExceptions.md
 
 dotnet new web -o ContactValidationExceptions
-echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+dotnet sln ContactValidationExceptions.slnx add ContactValidationExceptions/ContactValidationExceptions.csproj
+echo "# ContactValidationExceptions" >> ContactValidationExceptions/ContactValidationExceptions.md
 
 dotnet new web -o ContactProblemDetails
-echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+dotnet sln ContactProblemDetails.slnx add ContactProblemDetails/ContactProblemDetails.csproj
+echo "# ContactProblemDetails" >> ContactProblemDetails/ContactProblemDetails.md
 
 dotnet new web -o ContactHealthChecks
-echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
+dotnet sln ContactHealthChecks.slnx add ContactHealthChecks/ContactHealthChecks.csproj
+echo "# ContactHealthChecks" >> ContactHealthChecks/ContactHealthChecks.md
+
+
+dotnet new web -o ContactAspire
+dotnet sln ContactAspire.slnx add ContactAspire/ContactAspire.csproj
+echo "# ContactAspire" >> ContactAspire/ContactAspire.md
 ```
 
 ```cs
