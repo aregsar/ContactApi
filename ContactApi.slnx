@@ -1,6 +1,8 @@
 <Solution>
   <Project Path="ContactApi/ContactApi.csproj" />
+  <Project Path="ContactApplicationLogging/ContactApplicationLogging.csproj" />
   <Project Path="ContactEfCoreLogging/ContactEfCoreLogging.csproj" />
+  <Project Path="ContactHttpClientLogging/ContactHttpClientLogging.csproj" />
   <Project Path="ContactHttpLogging/ContactHttpLogging.csproj" />
   <Project Path="ContactLoggingProviders/ContactLoggingProviders.csproj" />
   <Project Path="ContactOpenApi/ContactOpenApi.csproj" />
