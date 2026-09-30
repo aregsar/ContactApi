@@ -3,7 +3,35 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<ContactDbContext>(opt => opt.UseInMemoryDatabase("Contacts"));
+
+
+builder.Services.AddDbContext<ContactDbContext>(options =>
+{
+    options.UseInMemoryDatabase("Contacts");
+
+    // var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    // ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    // options.UseSqlite(connectionString);
+    // options.UseNpgsql(connectionString);
+    // options.UseMySql(connectionString);
+    // options.UseSqlServer(connectionString);
+
+
+    bool enableSensitiveLogging = builder.Configuration.GetValue<bool>("EntityFramework:EnableSensitiveDataLogging", false);
+    bool enableDetailedErrors = builder.Configuration.GetValue<bool>("EntityFramework:EnableDetailedErrors", false);
+
+    if (enableSensitiveLogging)
+    {
+        options.EnableSensitiveDataLogging();
+    }
+
+    if (enableDetailedErrors)
+    {
+        options.EnableDetailedErrors();
+    }
+
+});
+
 
 builder.Services.AddOpenApi();
 
