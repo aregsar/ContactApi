@@ -251,6 +251,37 @@ using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+///////////////////////////////////////////////////////////////////////////////
+//Optional redaction services
+builder.Logging.EnableRedaction();
+//standard compliance rules (e.g., Erasing or HMAC)
+builder.Services.AddRedaction(redactionBuilder =>
+{
+    // Define that anything categorized as "Sensitive" gets erased or masked
+    redactionBuilder.SetRedactor<ErasingRedactor>(DataClassificationSet.FromKeyValue("Taxonomy", "Sensitive"));
+
+    // Set a fallback redactor for unspecified categories
+    redactionBuilder.SetFallbackRedactor<StarRedactor>();
+});
+
+builder.Services.AddSingleton<ILoggerProvider, ComplianceEFCoreLoggingForwarder>(sp =>
+{
+    var factory = sp.GetRequiredService<ILoggerFactory>();
+    var redactors = sp.GetRequiredService<IRedactorProvider>();
+    return new ComplianceEFCoreLoggingForwarder(factory, redactors);
+});
+
+//This is done in appsettings.json instead of in code:
+// "Microsoft.EntityFrameworkCore.Database.Command": "None",
+// "Microsoft.EntityFrameworkCore.Database.Command.Redacted": "Information",
+//
+// Mute the original raw EF Core logger so it doesn't leak raw credentials
+// to your sinks alongside your redacted ones
+//builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.None);
+// Allow your custom redacted namespace to output normally
+//builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command.Redacted", LogLevel.Information);
+///////////////////////////////////////////////////////////////////////////////
+
 builder.Services.AddDbContext<ContactDbContext>(options =>
 {
     options.UseInMemoryDatabase("Contacts");
@@ -299,5 +330,81 @@ app.MapGet("/", () => "Hello World!");
 ContactsEndpointMapper.Map(app);
 
 app.Run();
+
+```
+
+### Redacting
+
+```cs
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Compliance.Redaction;
+using Microsoft.Extensions.Compliance.Classification;
+using System.Text.RegularExpressions;
+
+//intercept logging pipeline message, redact and forward to logging pipeline so all registered logging providers can log the redacted output
+public class ComplianceEFCoreLoggingForwarder : ILoggerProvider
+{
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly IRedactorProvider _redactorProvider;
+
+    public ComplianceEFCoreLoggingForwarder(ILoggerFactory loggerFactory, IRedactorProvider redactorProvider)
+    {
+        _loggerFactory = loggerFactory;
+        _redactorProvider = redactorProvider;
+    }
+
+    public ILogger CreateLogger(string categoryName)
+    {
+        // Only intercept EF Core command logs
+        if (categoryName == "Microsoft.EntityFrameworkCore.Database.Command")
+        {
+            // Create a safe target logger that distributes to ALL providers
+            // Using a distinct category name prevents infinite recursion loops
+            var targetLogger = _loggerFactory.CreateLogger("Microsoft.EntityFrameworkCore.Database.Command.Redacted");
+            return new RedactingForwarder(targetLogger, _redactorProvider);
+        }
+
+        // Return a dummy logger for other EF categories so we don't interfere
+        return NullLogger.Instance;
+    }
+
+    public void Dispose() { }
+
+    private class RedactingForwarder : ILogger
+    {
+        private readonly ILogger _target;
+        private readonly Redactor _redactor;
+        private static readonly Regex ParameterRegex = new(@"(@\w*(?:password|secret|ssn)\w*)\s*=\s*'([^']*)'", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        public RedactingForwarder(ILogger target, IRedactorProvider redactorProvider)
+        {
+            _target = target;
+            _redactor = redactorProvider.GetRedactor(DataClassificationSet.FromKeyValue("Taxonomy", "Sensitive"));
+        }
+
+        public IDisposable? BeginScope<TState>(TState state) where TState : notnull => _target.BeginScope(state);
+        public bool IsEnabled(LogLevel logLevel) => _target.IsEnabled(logLevel);
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+        {
+            // 1. Format the raw EF Core log text
+            var message = formatter(state, exception);
+
+            if (!string.IsNullOrEmpty(message))
+            {
+                // 2. Redact using .NET 10 Engine
+                message = ParameterRegex.Replace(message, match =>
+                {
+                    string paramName = match.Groups[1].Value;
+                    string rawValue = match.Groups[2].Value;
+                    return $"{paramName} = '{_redactor.Redact(rawValue)}'";
+                });
+            }
+
+            // 3. Forward the sanitized string to ALL configured loggers
+            _target.Log(logLevel, eventId, exception, "{Message}", message);
+        }
+    }
+}
 
 ```
