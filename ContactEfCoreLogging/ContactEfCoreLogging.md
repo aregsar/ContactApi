@@ -264,13 +264,25 @@ builder.Services.AddRedaction(redactionBuilder =>
     redactionBuilder.SetFallbackRedactor<StarRedactor>();
 });
 
+builder.Services.Configure<ComplianceEFCoreLoggingOptions>(options =>
+{
+    options.EnableSensitiveDataLogging = isSensitiveLoggingEnabled;
+});
 builder.Services.AddSingleton<ILoggerProvider, ComplianceEFCoreLoggingForwarder>(sp =>
 {
-    var factory = sp.GetRequiredService<ILoggerFactory>();
-    var redactors = sp.GetRequiredService<IRedactorProvider>();
-    return new ComplianceEFCoreLoggingForwarder(factory, redactors);
-});
+    // Resolve safe dependencies immediately during startup
+    var redactorProvider = sp.GetRequiredService<IRedactorProvider>();
+    var options = sp.GetRequiredService<IOptions<ComplianceEFCoreLoggingOptions>>();
 
+    // Pass a lambda delegate () => sp.GetRequiredService<T>() to satisfy the Func<ILoggerFactory> parameter.
+    // This breaks the loop because ILoggerFactory is only looked up when a log is written.
+    return new ComplianceEFCoreLoggingForwarder(
+        () => sp.GetRequiredService<ILoggerFactory>(),
+        redactorProvider,
+        options
+    );
+});
+//
 //This is done in appsettings.json instead of in code:
 // "Microsoft.EntityFrameworkCore.Database.Command": "None",
 // "Microsoft.EntityFrameworkCore.Database.Command.Redacted": "Information",
@@ -336,34 +348,48 @@ app.Run();
 ### Redacting
 
 ```cs
+//intercept logging pipeline message, redact and forward to logging pipeline so all registered logging providers can log the redacted output
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Compliance.Redaction;
 using Microsoft.Extensions.Compliance.Classification;
+using Microsoft.Extensions.Options;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging.Abstractions;
 
-//intercept logging pipeline message, redact and forward to logging pipeline so all registered logging providers can log the redacted output
+public class ComplianceEFCoreLoggingOptions
+{
+    public bool EnableSensitiveDataLogging { get; set; }
+}
+
 public class ComplianceEFCoreLoggingForwarder : ILoggerProvider
 {
     private readonly ILoggerFactory _loggerFactory;
     private readonly IRedactorProvider _redactorProvider;
+    private readonly ComplianceEFCoreLoggingOptions _options; // Added
 
-    public ComplianceEFCoreLoggingForwarder(ILoggerFactory loggerFactory, IRedactorProvider redactorProvider)
+    public ComplianceEFCoreLoggingForwarder(
+        Func<ILoggerFactory> loggerFactoryProvider,
+        IRedactorProvider redactorProvider,
+        IOptions<ComplianceEFCoreLoggingOptions> options)
     {
-        _loggerFactory = loggerFactory;
+        _loggerFactoryProvider = loggerFactoryProvider;
         _redactorProvider = redactorProvider;
+        _options = options.Value;
     }
+
 
     public ILogger CreateLogger(string categoryName)
     {
-        // Only intercept EF Core command logs
         if (categoryName == "Microsoft.EntityFrameworkCore.Database.Command")
         {
+            // Invoke the delegate only when needed
+            var loggerFactory = _loggerFactoryProvider();
             // Create a safe target logger that distributes to ALL providers
             // Using a distinct category name prevents infinite recursion loops
-            var targetLogger = _loggerFactory.CreateLogger("Microsoft.EntityFrameworkCore.Database.Command.Redacted");
-            return new RedactingForwarder(targetLogger, _redactorProvider);
+            var targetLogger = loggerFactory.CreateLogger("Microsoft.EntityFrameworkCore.Database.Command.Redacted");
+             // Pass options down to the internal forwarder
+            return new RedactingForwarder(targetLogger, _redactorProvider, _options);
         }
-
         // Return a dummy logger for other EF categories so we don't interfere
         return NullLogger.Instance;
     }
@@ -374,11 +400,13 @@ public class ComplianceEFCoreLoggingForwarder : ILoggerProvider
     {
         private readonly ILogger _target;
         private readonly Redactor _redactor;
+        private readonly ComplianceEFCoreLoggingOptions _options; // Added
         private static readonly Regex ParameterRegex = new(@"(@\w*(?:password|secret|ssn)\w*)\s*=\s*'([^']*)'", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        public RedactingForwarder(ILogger target, IRedactorProvider redactorProvider)
+        public RedactingForwarder(ILogger target, IRedactorProvider redactorProvider, ComplianceEFCoreLoggingOptions options)
         {
             _target = target;
+            _options = options;
             _redactor = redactorProvider.GetRedactor(DataClassificationSet.FromKeyValue("Taxonomy", "Sensitive"));
         }
 
@@ -387,12 +415,12 @@ public class ComplianceEFCoreLoggingForwarder : ILoggerProvider
 
         public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
         {
-            // 1. Format the raw EF Core log text
             var message = formatter(state, exception);
 
-            if (!string.IsNullOrEmpty(message))
+            // Conditional execution: Redact ONLY if EnableSensitiveDataLogging is set to true
+            if (_options.EnableSensitiveDataLogging && !string.IsNullOrEmpty(message))
             {
-                // 2. Redact using .NET 10 Engine
+                // Redact using .NET 10 Engine
                 message = ParameterRegex.Replace(message, match =>
                 {
                     string paramName = match.Groups[1].Value;
@@ -401,10 +429,8 @@ public class ComplianceEFCoreLoggingForwarder : ILoggerProvider
                 });
             }
 
-            // 3. Forward the sanitized string to ALL configured loggers
             _target.Log(logLevel, eventId, exception, "{Message}", message);
         }
     }
 }
-
 ```
