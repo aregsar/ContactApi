@@ -7,4 +7,5 @@
   <Project Path="ContactLoggingProviders/ContactLoggingProviders.csproj" />
   <Project Path="ContactOpenApi/ContactOpenApi.csproj" />
   <Project Path="ContactOpenTelemetry/ContactOpenTelemetry.csproj" />
+  <Project Path="ContactUseStatusCodes/ContactUseStatusCodes.csproj" />
 </Solution>

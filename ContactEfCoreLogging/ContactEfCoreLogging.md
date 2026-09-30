@@ -1,6 +1,6 @@
 # ContactEfCoreLogging
 
-## Configure Http Logging
+## Configure EFCore Logging
 
 ### Create the project boilerplate
 

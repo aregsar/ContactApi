@@ -33,7 +33,7 @@ dotnet new web -o ContactOpenApi
 dotnet sln ContactApi.slnx add ContactOpenApi/ContactOpenApi.csproj
 echo "# ContactOpenApi" >> ContactOpenApi/ContactOpenApi.md
 
-///////////////
+
 dotnet new web -o ContactEfCoreLogging
 dotnet sln ContactApi.slnx add ContactEfCoreLogging/ContactEfCoreLogging.csproj
 echo "# ContactEfCoreLogging" >> ContactEfCoreLogging/ContactEfCoreLogging.md
@@ -46,32 +46,31 @@ echo "# ContactEfCoreLogging" >> ContactEfCoreLogging/ContactEfCoreLogging.md
 
 
 dotnet new web -o ContactUseStatusCodes
-dotnet sln ContactUseStatusCodes.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
+dotnet sln ContactApi.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
 echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
 
 dotnet new web -o ContactUseExceptions
-dotnet sln ContactUseExceptions.slnx add ContactUseExceptions/ContactUseExceptions.csproj
+dotnet sln ContactApi.slnx add ContactUseExceptions/ContactUseExceptions.csproj
 echo "# ContactUseExceptions" >> ContactUseExceptions/ContactUseExceptions.md
 
 dotnet new web -o ContactGlobalExceptions
-dotnet sln ContactGlobalExceptions.slnx add ContactGlobalExceptions/ContactGlobalExceptions.csproj
+dotnet sln ContactApi.slnx add ContactGlobalExceptions/ContactGlobalExceptions.csproj
 echo "# ContactGlobalExceptions" >> ContactGlobalExceptions/ContactGlobalExceptions.md
 
 dotnet new web -o ContactValidationExceptions
-dotnet sln ContactValidationExceptions.slnx add ContactValidationExceptions/ContactValidationExceptions.csproj
+dotnet sln ContactApi.slnx add ContactValidationExceptions/ContactValidationExceptions.csproj
 echo "# ContactValidationExceptions" >> ContactValidationExceptions/ContactValidationExceptions.md
 
 dotnet new web -o ContactProblemDetails
-dotnet sln ContactProblemDetails.slnx add ContactProblemDetails/ContactProblemDetails.csproj
+dotnet sln ContactApi.slnx add ContactProblemDetails/ContactProblemDetails.csproj
 echo "# ContactProblemDetails" >> ContactProblemDetails/ContactProblemDetails.md
 
 dotnet new web -o ContactHealthChecks
-dotnet sln ContactHealthChecks.slnx add ContactHealthChecks/ContactHealthChecks.csproj
+dotnet sln ContactApi.slnx add ContactHealthChecks/ContactHealthChecks.csproj
 echo "# ContactHealthChecks" >> ContactHealthChecks/ContactHealthChecks.md
 
-
 dotnet new web -o ContactAspire
-dotnet sln ContactAspire.slnx add ContactAspire/ContactAspire.csproj
+dotnet sln ContactApi.slnx add ContactAspire/ContactAspire.csproj
 echo "# ContactAspire" >> ContactAspire/ContactAspire.md
 ```
 
