@@ -6,7 +6,7 @@ Adding Problem Details to the http response body for http error status codes res
 
 We will add app.UseStatusCodePages() middleware for handling HTTP error responses in the range of 400–599 that in addition do not have a response body.
 
-The app.UseStatusCodePages() method will add a problemdetails response body using the IProblemDetailsFormatter implementation registered with the service container by the app.UseProblemDetails() method
+The app.UseStatusCodePages() method will add a problemdetails response body using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
 
 ### Create the project boilerplate
 
@@ -25,4 +25,28 @@ echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
 ```bash
 
 
+```
+
+Proram.cs
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+// Intercepts empty 400-599 responses and outputs a Problem Details object directly
+app.UseStatusCodePages(async statusCodeContext =>
+    await Results.Problem(statusCode: statusCodeContext.HttpContext.Response.StatusCode));
+
+
+```
+
+Proram.cs
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+builder.AddProblemDetails();
+var app = builder.Build();
+// Intercepts empty 400-599 responses and outputs a Problem Details object used by ing the IProblemDetailsWriter
+//implementation registered by AddProblemDetails().
+app.UseStatusCodePages();
 ```
