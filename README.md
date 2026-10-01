@@ -42,8 +42,6 @@ echo "# ContactEfCoreLogging" >> ContactEfCoreLogging/ContactEfCoreLogging.md
 
 # https://app.pluralsight.com/ilx/video-courses/getting-started-ef-core-10/course-overview
 
-# https://app.pluralsight.com/ilx/video-courses/ef-core-8-fundamentals/course-overview
-
 
 dotnet new web -o ContactUseStatusCodes
 dotnet sln ContactApi.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
