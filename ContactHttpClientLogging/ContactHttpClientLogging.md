@@ -851,3 +851,92 @@ app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
 
 app.Run();
 ```
+
+Instead of configuring everything by attaching configuraation directly to the `builder.Services.AddHttpClient()` call be can configure some defaults that will apply to all HttpClients including service discovery:
+
+First create a Helper method ConfigureHttpClientDefaults:
+
+```cs
+ private static TBuilder ConfigureHttpClientDefaults<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
+    {
+        builder.Services.AddServiceDiscovery();
+
+        builder.Services.ConfigureHttpClientDefaults(http =>
+        {
+            // Turn on resilience by default
+            //http.AddStandardResilienceHandler();
+            http.RedactLoggedHeaders(new[] { "Authorization", "X-Api-Key" })
+                .SetHandlerLifetime(TimeSpan.FromMinutes(5))
+                .AddStandardResilienceHandler()
+                .Configure(options =>
+                {
+                    // 1. Customize the Retry strategy
+                    options.Retry.MaxRetryAttempts = 5;
+                    options.Retry.Delay = TimeSpan.FromSeconds(2);
+                    options.Retry.BackoffType = DelayBackoffType.Exponential;
+
+                    // 2. Customize the Circuit Breaker
+                    options.CircuitBreaker.FailureRatio = 0.5; // Trip if 50% fail
+                    options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(10);
+
+                    // 3. Customize Attempt Timeouts
+                    options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
+                });
+
+            // Turn on service discovery by default
+            http.AddServiceDiscovery();
+        });
+
+        // Uncomment the following to restrict the allowed schemes for service discovery.
+        // builder.Services.Configure<ServiceDiscoveryOptions>(options =>
+        // {
+        //     options.AllowedSchemes = ["https"];
+        // });
+
+        return builder;
+    }
+
+```
+
+Now our program.cs can become:
+
+Program.cs
+
+```cs
+// using Microsoft.AspNetCore.Diagnostics.Logging;
+// using Microsoft.AspNetCore.Http;
+// using Microsoft.Extensions.DependencyInjection;
+// using Microsoft.Extensions.Diagnostics.Enrichment;
+// using Microsoft.Extensions.Hosting;
+// using System.Security.Claims;
+// using Microsoft.Extensions.Http.Diagnostics;
+// using System.Net.Http;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddHttpClientLogging();
+
+builder.ConfigureHttpClientDefaults()
+
+// add IHttpClientFactory implementation to service container
+builder.Services.AddHttpClient();
+
+var app = builder.Build();
+
+app.MapGet("/", () => "Hello World!");
+
+
+app.MapGet("/client", async (IHttpClientFactory httpClientFactory) => {
+
+    var client = _httpClientFactory.CreateClient();
+
+    //make a request to root URL
+    //https://jsonplaceholder.typicode.com
+    //var response = await client.GetAsync("https://jsonplaceholder.typicode.com/todos");
+    var response = await client.GetAsync("http://localhost:5014/");
+    return await response.Content.ReadAsStringAsync();
+
+});
+
+app.Run();
+```
