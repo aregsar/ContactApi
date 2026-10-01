@@ -1,11 +1,17 @@
 <Solution>
   <Project Path="ContactApi/ContactApi.csproj" />
   <Project Path="ContactApplicationLogging/ContactApplicationLogging.csproj" />
+  <Project Path="ContactAspire/ContactAspire.csproj" />
   <Project Path="ContactEfCoreLogging/ContactEfCoreLogging.csproj" />
+  <Project Path="ContactGlobalExceptions/ContactGlobalExceptions.csproj" />
+  <Project Path="ContactHealthChecks/ContactHealthChecks.csproj" />
   <Project Path="ContactHttpClientLogging/ContactHttpClientLogging.csproj" />
   <Project Path="ContactHttpLogging/ContactHttpLogging.csproj" />
   <Project Path="ContactLoggingProviders/ContactLoggingProviders.csproj" />
   <Project Path="ContactOpenApi/ContactOpenApi.csproj" />
   <Project Path="ContactOpenTelemetry/ContactOpenTelemetry.csproj" />
+  <Project Path="ContactProblemDetails/ContactProblemDetails.csproj" />
+  <Project Path="ContactUseExceptions/ContactUseExceptions.csproj" />
   <Project Path="ContactUseStatusCodes/ContactUseStatusCodes.csproj" />
+  <Project Path="ContactValidationExceptions/ContactValidationExceptions.csproj" />
 </Solution>

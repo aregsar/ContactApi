@@ -73,16 +73,3 @@ dotnet new web -o ContactAspire
 dotnet sln ContactApi.slnx add ContactAspire/ContactAspire.csproj
 echo "# ContactAspire" >> ContactAspire/ContactAspire.md
 ```
-
-```cs
-builder.Services.AddDbContext<MyDbContext>(options =>
-     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))
-    .options.EnableDetailedErrors();
-
-    if (builder.Environment.IsDevelopment())
-    {
-        //Show query parameter values
-        options.EnableSensitiveDataLogging();
-    }
-);
-```
