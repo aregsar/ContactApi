@@ -91,9 +91,9 @@ dotnet run --project ContactStarter/ContactStarter.csproj --launch-profile http
 
 > Note if you omit the --launch-profile flag then the first profile in launchSettings will be used as the default profile.
 
-Click on the send request button above the Get Root URL request.
+Click on the send request button above the Get Root URL request in the ContactStarter.http file to send a request and view the response.
 
-Go to Scalar UI in your browser and send a request from the UI
+Go to Scalar UI in your browser and send a request from the UI:
 
 ```bash
 open http://localhost:5095/Scalar/v1
@@ -105,7 +105,7 @@ If you have curl utility installed you can send a request using curl as well:
 curl
 ```
 
-### Testing
+### Add Endpoint Tests with XUnit
 
 Make sure you have the xunit v3 templates installed (need to run one time only)
 
