@@ -7,6 +7,11 @@ dotnet new web -o ContactApi
 dotnet sln ContactApi.slnx add ContactApi/ContactApi.csproj
 echo "# ContactApi" >> ContactApi/ContactApi.md
 
+
+dotnet new web -o ContactStarter
+dotnet sln ContactApi.slnx add ContactStarter/ContactStarter.csproj
+echo "# ContactStarter" >> ContactStarter/ContactStarter.md
+
 dotnet new web -o ContactLoggingProviders
 dotnet sln ContactApi.slnx add ContactLoggingProviders/ContactLoggingProviders.csproj
 echo "# ContactLoggingProviders" >> ContactLoggingProviders/ContactLoggingProviders.md

@@ -11,6 +11,7 @@
   <Project Path="ContactOpenApi/ContactOpenApi.csproj" />
   <Project Path="ContactOpenTelemetry/ContactOpenTelemetry.csproj" />
   <Project Path="ContactProblemDetails/ContactProblemDetails.csproj" />
+  <Project Path="ContactStarter/ContactStarter.csproj" />
   <Project Path="ContactUseExceptions/ContactUseExceptions.csproj" />
   <Project Path="ContactUseStatusCodes/ContactUseStatusCodes.csproj" />
   <Project Path="ContactValidationExceptions/ContactValidationExceptions.csproj" />
