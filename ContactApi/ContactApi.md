@@ -36,7 +36,6 @@ Create the Minimal API project:
 
 ```bash
 dotnet new web -o ContactApi
-echo "# ContactApi" >> ContactApi/ContactApi.md
 ```
 
 Add the project to the solution:

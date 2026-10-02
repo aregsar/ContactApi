@@ -4,18 +4,34 @@
 
 Starter minimal api project.
 
+### Creating the project solution
+
+Create a solution to host the project and enter the solution directory that is created:
+
+```bash
+dotnet new sln -n ContactStarter -o ContactStarter
+cd ContactStarter
+```
+
+> All following dotnet cli commands will be executed from the root directory of the solution.
+
+Optionally add a .gitignore and README.md file to the solution:
+
+```bash
+dotnet new .gitignore
+echo "# ContactStarter" >> README.md
+```
+
 ### Create the project boilerplate
 
-Use the project boilerplate from Creating a minimal Minimal API project boilerplate post
+Create a basic project boilerplate:
+
+> All following commands will be run from the solution root directory
 
 ```bash
 dotnet new web -o ContactStarter
 dotnet sln ContactApi.slnx add ContactStarter/ContactStarter.csproj
-echo "# ContactStarter" >> ContactStarter/ContactStarter.md
-echo "### ContactStarter Http Requests" >> ContactStarter/ContactStarter.http
 ```
-
-> All following commands will be run from the solution root directory
 
 ### Add Open Api package and the Scalar Open Api UI Package
 
@@ -41,7 +57,53 @@ app.MapGet("/", () => "Hello World!");
 app.Run();
 ```
 
+### Adding a http request to the ContactStarter.http file
+
+Before you add the .http file make sure your editor is configured to support .http files.
+
+> Some editors like Visual Studio or Rider have built in support. VSCode editor needs the `REST Client for Visual Studio Code` extension.
+
+```bash
+touch ContactStarter/ContactStarter.http
+```
+
+Add a HTTP GET request:
+
+```http
+@baseUrl = http://localhost:5095
+
+### Get Root URL
+GET {{baseUrl}}/
+Accept: application/json
+```
+
+The `Properties/launchSettings.json` file in the project contains a `http` profile.
+
+Use the  `applicationUrl` setting randomly generated port number in the `http` profile of your project as the `@baseUrl` port.
+
 ### Running the api and sending requests
+
+Run the the project with the launchSettings.json http profile:
+
+```bash
+dotnet run --project ContactStarter/ContactStarter.csproj --launch-profile http
+```
+
+> Note if you omit the --launch-profile flag then the first profile in launchSettings will be used as the default profile.
+
+Click on the send request button above the Get Root URL request.
+
+Go to Scalar UI in your browser and send a request from the UI
+
+```bash
+open http://localhost:5095/Scalar/v1
+```
+
+If you have curl utility installed you can send a request using curl as well:
+
+```bash
+curl
+```
 
 ### Testing
 
