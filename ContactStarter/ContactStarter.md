@@ -191,10 +191,15 @@ public class ContactStarterTests
         Assert.Equal("Hello World!", message);
 
 
-
+        //for app.MapGet("/", Ok<string> () => TypedResults.Ok("Hello World!")):
         //   Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
-        //    MessageResponse? messageResponse = await response.Content.ReadFromJsonAsync<MessageResponse>(TestContext.Current.CancellationToken);
+        //var message = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
+        //json response wraps hello world response in quotes
+        //   Assert.Equal("\"Hello World!\"", message);
 
+        //for app.MapGet("/", Ok<MessageResponse> () => TypedResults.Ok(new MessageResponse("Hello World!")));
+        //   Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        //   MessageResponse? messageResponse = await response.Content.ReadFromJsonAsync<MessageResponse>(TestContext.Current.CancellationToken);
         // Assert.NotNull(messageResponse);
         // Assert.Equal("Hello World!", messageResponse?.Message);
     }
