@@ -45,6 +45,8 @@ dotnet package add Scalar.AspNetCore --project ContactStarter/ContactStarter.csp
 Add a basic minimal api boilerplate that includes the OpenApi and Scalar UI integration:
 
 ```cs
+//using Microsoft.AspNetCore.Http.HttpResults;
+using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 var app = builder.Build();
@@ -54,7 +56,14 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 app.MapGet("/", () => "Hello World!");
+
+//this returns text/json content
+//app.MapGet("/", Ok<string> () => TypedResults.Ok("Hello World!"));
+//this returns text/json content type valid json serialized object MessageResponse
+//app.MapGet("/", Ok<MessageResponse> () => TypedResults.Ok(new MessageResponse("Hello World!")));
+
 app.Run();
+//public record MessageResponse(string Message);
 ```
 
 ### Adding a http request to the ContactStarter.http file
@@ -155,6 +164,8 @@ Add the root endpoint test to ContactStarterTests.cs file:
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 
+namespace ContactStarter.Tests;
+
 public class ContactStarterTests
 {
     [Fact]
@@ -178,6 +189,27 @@ public class ContactStarterTests
         var message = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal("Hello World!", message);
+
+
+
+        //   Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        //    MessageResponse? messageResponse = await response.Content.ReadFromJsonAsync<MessageResponse>(TestContext.Current.CancellationToken);
+
+        // Assert.NotNull(messageResponse);
+        // Assert.Equal("Hello World!", messageResponse?.Message);
     }
 }
+```
+
+Run the tests:
+
+```bash
+# run all tests  in the test project
+dotnet run --project tests/ContactStarter.Tests/ContactStarter.Tests.csproj
+
+# run all tests in a ContactStarterTests class in the test project
+dotnet run --project tests/ContactStarter.Tests/ContactStarter.Tests.csproj -- -class ContactStarter.Tests.ContactStarterTests
+
+# run the GET_RootEndpoint_Returns_200_OK_And_HelloWorld class method test in the project
+dotnet run --project tests/ContactStarter.Tests/ContactStarter.Tests.csproj -- -method ContactStarter.Tests.ContactStarterTests.GET_RootEndpoint_Returns_200_OK_And_HelloWorld
 ```
