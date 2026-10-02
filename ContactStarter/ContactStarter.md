@@ -158,7 +158,7 @@ touch ContactStarter.Tests/ContactStarterTests.cs
 
 Add the root endpoint test to ContactStarterTests.cs file:
 
-> The test code is for demo testing only. For production tests we would not create a new WebApplicationFactory for each test method and use an IClassFixture instead.
+> The test code is for demo testing only. For production tests we would not create a new WebApplicationFactory for each test method. We would use an IClassFixture instead.
 
 ```cs
 using System.Net;
