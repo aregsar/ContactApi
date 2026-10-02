@@ -91,19 +91,34 @@ dotnet run --project ContactStarter/ContactStarter.csproj --launch-profile http
 
 > Note if you omit the --launch-profile flag then the first profile in launchSettings will be used as the default profile.
 
-Click on the send request button above the Get Root URL request in the ContactStarter.http file to send a request and view the response.
+Click on the send request button above the Get Root URL request in the ContactStarter.http file to send a request and view the response:
 
-Go to Scalar UI in your browser and send a request from the UI:
+```bash
+HTTP/1.1 200 OK
+Connection: close
+Content-Type: text/plain; charset=utf-8
+Date: Wed, 29 Jul 2026 20:19:59 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+Hello World!
+```
+
+Go to Scalar UI in your browser and send the request from the Scalar dashboard page:
 
 ```bash
 open http://localhost:5095/Scalar/v1
 ```
 
-If you have curl utility installed you can send a request using curl as well:
+If you have curl utility installed you can also send a request using curl as well.
+
+Open another terminal tab and run the curl command to see the same response:
 
 ```bash
-curl
+curl -i -H "Connection: close" http://localhost:5095
 ```
+
+>Note that with Curl we need to explicitly send the Connection: close header for the Kestrel server to close the connection using. This is something that the VSCode REST Client extension takes care of automatically when we use the .http file to make the request. The HTTP Client extension automatically injects the Connection: close header into the request which is why we get the Connection: close header back in the response when using the .http file to send the request.
 
 ### Add Endpoint Tests with XUnit
 
