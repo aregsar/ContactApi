@@ -4,6 +4,8 @@
 
 Starter minimal api project.
 
+> Uses .NET 10
+
 ### Creating the project solution
 
 Create a solution to host the project and enter the solution directory that is created:
@@ -22,11 +24,9 @@ dotnet new .gitignore
 echo "# ContactStarter" >> README.md
 ```
 
-### Create the project boilerplate
+### Create the project and add to solution
 
-Create a basic project boilerplate:
-
-> All following commands will be run from the solution root directory
+Create a basic project boilerplate and add it to the solution (.slnx) file:
 
 ```bash
 dotnet new web -o ContactStarter
@@ -40,21 +40,26 @@ dotnet package add Microsoft.AspNetCore.OpenApi --project ContactStarter/Contact
 dotnet package add Scalar.AspNetCore --project ContactStarter/ContactStarter.csproj
 ```
 
-### Boilerplate Code
+### Update Minimal API Code
 
-Add a basic minimal api boilerplate that includes the OpenApi and Scalar UI integration:
+Add the OpenApi and Scalar UI integration to the generated minimal api boilerplate in Program.cs:
 
 ```cs
 //using Microsoft.AspNetCore.Http.HttpResults;
 using Scalar.AspNetCore;
+
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.AddOpenApi();
+
 var app = builder.Build();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
 }
+
 app.MapGet("/", () => "Hello World!");
 
 //this returns text/json content
@@ -66,17 +71,19 @@ app.Run();
 //public record MessageResponse(string Message);
 ```
 
-### Adding a http request to the ContactStarter.http file
+### Adding a .http file for making API requests
 
 Before you add the .http file make sure your editor is configured to support .http files.
 
 > Some editors like Visual Studio or Rider have built in support. VSCode editor needs the `REST Client for Visual Studio Code` extension.
 
+Add the .http file to the project root:
+
 ```bash
 touch ContactStarter/ContactStarter.http
 ```
 
-Add a HTTP GET request:
+Add a HTTP GET request to the .http file:
 
 ```http
 @baseUrl = http://localhost:5095
@@ -86,11 +93,9 @@ GET {{baseUrl}}/
 Accept: application/json
 ```
 
-The `Properties/launchSettings.json` file in the project contains a `http` profile.
+Replace the `@baseUrl` port number  with the randomly generated port number of the `applicationUrl` setting in the `http` profile of your projects `Properties/launchSettings.json` file.
 
-Use the  `applicationUrl` setting randomly generated port number in the `http` profile of your project as the `@baseUrl` port.
-
-### Running the api and sending requests
+### Running the api and sending requests with .http file
 
 Run the the project with the launchSettings.json http profile:
 
@@ -98,9 +103,11 @@ Run the the project with the launchSettings.json http profile:
 dotnet run --project ContactStarter/ContactStarter.csproj --launch-profile http
 ```
 
-> Note if you omit the --launch-profile flag then the first profile in launchSettings will be used as the default profile.
+> Note if you omit the --launch-profile flag then the first profile in launchSettings.json file will be used as the default launch profile.
 
-Click on the send request button above the Get Root URL request in the ContactStarter.http file to send a request and view the response:
+Click on the send request button above the comment line in the .http file to send the GET request to the root URL.
+
+The response should look like:
 
 ```bash
 HTTP/1.1 200 OK
@@ -113,13 +120,17 @@ Transfer-Encoding: chunked
 Hello World!
 ```
 
+### Sending requests using the scalar web page
+
 Go to Scalar UI in your browser and send the request from the Scalar dashboard page:
 
 ```bash
 open http://localhost:5095/Scalar/v1
 ```
 
-If you have curl utility installed you can also send a request using curl as well.
+### Sending requests using Curl
+
+If you have curl utility installed you can also send a request using the curl cli.
 
 Open another terminal tab and run the curl command to see the same response:
 
@@ -127,11 +138,15 @@ Open another terminal tab and run the curl command to see the same response:
 curl -i -H "Connection: close" http://localhost:5095
 ```
 
+Remember to change the port number according to your projects launch profile setting.
+
 >Note that with Curl we need to explicitly send the Connection: close header for the Kestrel server to close the connection using. This is something that the VSCode REST Client extension takes care of automatically when we use the .http file to make the request. The HTTP Client extension automatically injects the Connection: close header into the request which is why we get the Connection: close header back in the response when using the .http file to send the request.
 
 ### Add Endpoint Tests with XUnit
 
-Make sure you have the xunit v3 templates installed (need to run one time only)
+Install the xunit v3 templates:
+
+> The command need to run only when you need to install or update the templates.
 
 ```bash
 dotnet new install xunit.v3.templates
@@ -144,11 +159,13 @@ dotnet new xunit3 -f net10.0 -o tests/ContactStarter.Tests
 dotnet sln ContactApi.slnx add tests/ContactStarter.Tests/ContactStarter.Tests.csproj
 ```
 
-Add a reference to the ContactStarter.Tests.csproj file that references the ContactStarter.csproj project:
+Reference the ContactStarter.csproj project from the ContactStarter.Tests.csproj:
 
 ```bash
 dotnet add tests/ContactStarter.Tests/ContactStarter.Tests.csproj reference ContactStarter/ContactStarter.csproj
 ```
+
+The command adds a reference to the ContactStarter.Tests.csproj file.
 
 Add a test file to the test project:
 
