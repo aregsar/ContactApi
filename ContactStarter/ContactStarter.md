@@ -60,6 +60,13 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
+// Intercepts empty 400-599 responses and outputs a Problem Details object used by ing the IProblemDetailsWriter
+//implementation registered by AddProblemDetails().
+app.UseStatusCodePages();
+
+// Intercepts empty 400-599 responses and outputs a Problem Details object directly
+//app.UseStatusCodePages(async statusCodeContext => await Results.Problem(statusCode: statusCodeContext.HttpContext.Response.StatusCode));
+
 app.MapGet("/", () => "Hello World!");
 
 //this returns text/json content
