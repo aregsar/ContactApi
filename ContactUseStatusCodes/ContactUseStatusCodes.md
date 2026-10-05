@@ -235,14 +235,14 @@ Transfer-Encoding: chunked
 
 As we can see now we have a json response in the body with the status and a traceId for the request.
 
-The UseStatusCodePages calls the WriteAsyncJson mehod of the IProblemDetailsWriter passing it a ProblemDetailsContext object that WriteAsyncJson serializes to the output stream.
+The UseStatusCodePages middleware calls the WriteAsyncJson merhod of the IProblemDetailsWriter passing it a ProblemDetailsContext object that WriteAsyncJson serializes to the output stream.
 
 ### Viewing the request in a Web browser
 
 You can navigate to <<http://localhost>:<PORT>/does/not/exist> in your browser to check the response with the ProblemDetail service and middleware installed.
 
 ```bash
-open http://localhost:5095/Scalar/v1
+open http://localhost:5095/does/not/exist
 ```
 
 You should see the same ProblemDetails json content displayed in the page:
@@ -321,7 +321,7 @@ public class ContactUseStatusCodesTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        Assert.Equal("text/plain", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
 
         var message = await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken);
 
