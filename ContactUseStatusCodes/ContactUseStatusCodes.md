@@ -2,27 +2,28 @@
 
 > Uses .NET 10
 
-## Configure Problem Details for bodyless Error Status Code responses
-
-Adding Problem Details to the http response body for http error status codes responses that have no body.
-
-We will add app.UseStatusCodePages() middleware for handling HTTP error responses in the range of 400–599 that in addition do not have a response body.
-
-The app.UseStatusCodePages() method will add a problemdetails response body using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
-
 ### Setting up the project skeleton quick start
 
 Prerequisite:
+
+Globally install or update the xunit V3 project templates:
 
 ```bash
 dotnet new install xunit.v3.templates
 ```
 
-Add skeleton:
+Create the project solution:
 
 ```bash
 dotnet new sln -n ContactUseStatusCodes -o ContactUseStatusCodes
 cd ContactUseStatusCodes
+```
+
+> All following dotnet cli commands will be executed from the root directory of the solution.
+
+Add skeleton:
+
+```bash
 dotnet new web -o ContactUseStatusCodes
 dotnet sln ContactApi.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
 #echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
@@ -33,7 +34,17 @@ dotnet new xunit3 -f net10.0 -o tests/ContactUseStatusCodes.Tests
 dotnet sln ContactApi.slnx add tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj
 dotnet add tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj reference ContactUseStatusCodes/ContactUseStatusCodes.csproj
 touch ContactUseStatusCodes/ContactUseStatusCodes.http
+#dotnet new .gitignore
+#echo "# ContactUseStatusCodes" >> README.md
 ```
+
+## Configure Problem Details for bodyless Error Status Code responses
+
+Adding Problem Details to the http response body for http error status codes responses that have no body.
+
+We will add app.UseStatusCodePages() middleware for handling HTTP error responses in the range of 400–599 that in addition do not have a response body.
+
+The app.UseStatusCodePages() method will add a problemdetails response body using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
 
 ### Creating the project solution
 
