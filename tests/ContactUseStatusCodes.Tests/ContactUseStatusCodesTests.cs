@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
@@ -66,8 +67,12 @@ public class ContactUseStatusCodesTests
 
         Assert.Null(problem?.Detail);
 
+        //Test traceparent
         object? traceId = null;
         Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
-        Assert.Equal(MockTraceParentValue, traceId?.ToString());
+        var actualContext = ActivityContext.Parse(traceId?.ToString(), null);
+        var expectedContext = ActivityContext.Parse(MockTraceParentValue, null);
+        Assert.Equal(expectedContext.TraceId, actualContext.TraceId);
+
     }
 }

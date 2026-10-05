@@ -298,6 +298,7 @@ Add the root endpoint test to ContactUseStatusCodesTests.cs file:
 > The test code is for demo testing only. For production tests we would not create a new WebApplicationFactory for each test method. We would use an IClassFixture instead.
 
 ```cs
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
@@ -307,13 +308,15 @@ namespace ContactUseStatusCodes.Tests;
 
 public class ContactUseStatusCodesTests
 {
+
+    // W3C traceparent header
+    // Format: Version-TraceId-SpanId-Flags
     private const string MockTraceParentValue = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
     private const string TraceParentRequestHeaderName = "traceparent";
 
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
     {
-        ///does/not/exist
         var factory = new WebApplicationFactory<Program>();
 
         var client = factory.CreateClient();
@@ -328,8 +331,13 @@ public class ContactUseStatusCodesTests
 
         Assert.NotNull(problem);
 
-    }
+        Assert.Equal(404, problem?.Status);
 
+        Assert.Equal("Not Found", problem?.Title);
+
+        Assert.Null(problem?.Detail);
+
+    }
 
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content_Injected_Traceparent()
@@ -352,9 +360,22 @@ public class ContactUseStatusCodesTests
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(TestContext.Current.CancellationToken);
 
         Assert.NotNull(problem);
+
+        Assert.Equal(404, problem?.Status);
+
+        Assert.Equal("Not Found", problem?.Title);
+
+        Assert.Null(problem?.Detail);
+
+        //Test traceparent
+        object? traceId = null;
+        Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
+        var actualContext = ActivityContext.Parse(traceId?.ToString(), null);
+        var expectedContext = ActivityContext.Parse(MockTraceParentValue, null);
+        Assert.Equal(expectedContext.TraceId, actualContext.TraceId);
+
     }
 }
-
 ```
 
 Run the tests:
