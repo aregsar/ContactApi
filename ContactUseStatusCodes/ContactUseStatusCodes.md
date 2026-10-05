@@ -2,13 +2,17 @@
 
 > Uses .NET 10
 
-## Configure Problem Details for bodiless Error Status Code responses
+## Adding Problem Details content to contentless Error Status Code responses
 
-Adding Problem Details to the http response body for http error status codes responses that have no body.
+When running minimal apis we want to return a consistant error response in all conditions where the response return an error status code in the  400–599 range.
 
-We will add app.UseStatusCodePages() middleware for handling HTTP error responses in the range of 400–599 that in addition do not have a response body.
+We can leverage the ProblemDetails RFC to return a json ProblemDetails response that all clients han handle in consistant manner.
 
-The app.UseStatusCodePages() method will add a problemdetails response body using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
+By default for certains requests the asp.net request pipeline may return error status code responses without content in the body.
+
+For these cases we want to be able to add a ProblemDetails content to the output stream to remain consistant.
+
+In this article I will show you how the asp.net UseStatusCodePages middleware and the UseProblemDetails service work together to accomplish this.
 
 ### Creating the project solution
 
@@ -277,10 +281,16 @@ dotnet add tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj 
 
 The command adds a reference to the ContactUseStatusCodes.Tests.csproj file.
 
+Add the Microsoft.AspNetCore.Mvc.Testing package to the test project:
+
+```bash
+dotnet package add Microsoft.AspNetCore.Mvc.Testing --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj
+```
+
 Add a test file to the test project:
 
 ```bash
-touch ContactStarter.Tests/ContactUseStatusCodesTests.cs
+touch tests/ContactUseStatusCodes.Tests/ContactUseStatusCodesTests.cs
 ```
 
 Add the root endpoint test to ContactUseStatusCodesTests.cs file:
@@ -345,3 +355,9 @@ dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tes
 # run the GET_RootEndpoint_Returns_200_OK_And_HelloWorld class method test in the project
 dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj -- -method ContactUseStatusCodes.Tests.ContactUseStatusCodesTests.GET_RootEndpoint_Returns_200_OK_And_HelloWorld
 ```
+
+### Bonus: Writing custom body reponse using a delegate
+
+We can pass in a delegate with custom code to write response content to the UseStatusCodePages when we call it.
+
+In this case we are overriding the default middleware code that writes content to the response  stream using IProblemDetailWriter with our own custom code that can also use the IProblemDetailWriter service.

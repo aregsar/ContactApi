@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/tests/">
+    <Project Path="tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj" />
+  </Folder>
   <Project Path="ContactApi/ContactApi.csproj" />
   <Project Path="ContactApplicationLogging/ContactApplicationLogging.csproj" />
   <Project Path="ContactAspire/ContactAspire.csproj" />

@@ -174,10 +174,16 @@ dotnet add tests/ContactStarter.Tests/ContactStarter.Tests.csproj reference Cont
 
 The command adds a reference to the ContactStarter.Tests.csproj file.
 
+Add the Microsoft.AspNetCore.Mvc.Testing package to the test project:
+
+```bash
+dotnet package add Microsoft.AspNetCore.Mvc.Testing --project tests/ContactStarter.Tests/ContactStarter.Tests.csproj
+```
+
 Add a test file to the test project:
 
 ```bash
-touch ContactStarter.Tests/ContactStarterTests.cs
+touch tests/ContactStarter.Tests/ContactStarterTests.cs
 ```
 
 Add the root endpoint test to ContactStarterTests.cs file:
