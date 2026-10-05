@@ -34,7 +34,7 @@ public class ContactUseStatusCodesTests
 
         Assert.Equal("Not Found", problem?.Title);
 
-        //Assert.Null(problem?.Detail);
+        Assert.Null(problem?.Detail);
 
     }
 
@@ -64,10 +64,10 @@ public class ContactUseStatusCodesTests
 
         Assert.Equal("Not Found", problem?.Title);
 
-        //Assert.Null(problem?.Detail);
+        Assert.Null(problem?.Detail);
 
-        // object? traceId = null;
-        // Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
-        // Assert.Equal(MockTraceParentValue, traceId?.ToString());
+        object? traceId = null;
+        Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
+        Assert.Equal(MockTraceParentValue, traceId?.ToString());
     }
 }
