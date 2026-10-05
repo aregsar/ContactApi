@@ -112,7 +112,7 @@ dotnet run --project ContactStarter/ContactStarter.csproj --launch-profile http
 
 > Note if you omit the --launch-profile flag then the first profile in launchSettings.json file will be used as the default launch profile.
 
-Click on the send request button above the comment line in the .http file to send the GET request to the root URL.
+Click on the `send request` button right below the comment line in the .http file to send the GET request to the root URL.
 
 The response should look like:
 

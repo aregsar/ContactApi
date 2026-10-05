@@ -50,13 +50,11 @@ dotnet package add Scalar.AspNetCore --project ContactUseStatusCodes/ContactUseS
 Add the OpenApi and Scalar UI integration to the generated minimal api boilerplate in Program.cs:
 
 ```cs
-//using Microsoft.AspNetCore.Http.HttpResults;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
-builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -66,17 +64,9 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-
-
 app.MapGet("/", () => "Hello World!");
 
-//this returns text/json content
-//app.MapGet("/", Ok<string> () => TypedResults.Ok("Hello World!"));
-//this returns text/json content type valid json serialized object MessageResponse
-//app.MapGet("/", Ok<MessageResponse> () => TypedResults.Ok(new MessageResponse("Hello World!")));
-
 app.Run();
-//public record MessageResponse(string Message);
 ```
 
 ### Adding a .http file for making API requests
@@ -108,47 +98,159 @@ Replace the `@baseUrl` port number  with the randomly generated port number of t
 Run the the project with the launchSettings.json http profile:
 
 ```bash
-dotnet run --project ContactUseStatusCodes/ContactUseStatusCodes.csproj --launch-profile http
+dotnet watch --project ContactUseStatusCodes/ContactUseStatusCodes.csproj --launch-profile http
 ```
 
 > Note if you omit the --launch-profile flag then the first profile in launchSettings.json file will be used as the default launch profile.
 
-Click on the send request button above the comment line in the .http file to send the GET request to the root URL.
+Click on the `send request` button right below the comment line in the .http file to send the GET request to the `/does/not/exist` URL.
 
 The response should look like:
 
 ```bash
-HTTP/1.1 200 OK
+HTTP/1.1 404 Not Found
+Content-Length: 0
 Connection: close
-Content-Type: text/plain; charset=utf-8
-Date: Wed, 29 Jul 2026 20:19:59 GMT
+Date: Mon, 05 Oct 2026 18:05:35 GMT
+Server: Kestrel
+```
+
+As we can see we get a 404 Not Found status code since we have not mapped the `/does/not/exist` URL.
+
+We also see that the response does not have a body content.
+
+We need to add the UseStatusCodePages middleware to intercept the empty response and add a ProblemDetails json content body to it.
+
+The UseStatusCodePages will only intercept and alter the response only if all the following is true:
+
+- The HTTP status code is between 400 and 599.
+- The response body length is zero, which means no content is written to the response stream.
+- The No Content-Type: The response Content-Type header has not been
+
+So lets add the middleware to the Program.cs file:
+
+```cs
+using Scalar.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenApi();
+
+var app = builder.Build();
+app.UseStatusCodePages();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
+```
+
+You can see we added the `app.UseStatusCodePages();` middleware line.
+
+> the dotnet watch hot reload does not reload the middleware pipeline unless you are only changing a delegate passed to it. So we need to reload it manually when change the pipeline.
+
+To reload the updated middleware pipeline, Type `ctrl + R` in the terminal window where dotnet watch is running to rerun it.
+
+Click on the send request button in the .http file to send the the request again.
+
+The response should look like:
+
+```http
+HTTP/1.1 404 Not Found
+Connection: close
+Content-Type: text/plain
+Date: Mon, 05 Oct 2026 18:26:03 GMT
 Server: Kestrel
 Transfer-Encoding: chunked
 
-Hello World!
+Status Code: 404; Not Found
 ```
 
-### Sending requests using the scalar web page
+Here we see the generic body content that the middleware adds: `Status Code: 404; Not Found`
 
-Go to Scalar UI in your browser and send the request from the Scalar dashboard page:
+We have not enabled it to write problem details json yet.
+
+To do that we need call builder.Services.AddProblemDetails().
+
+Lets add the call to Program.cs:
+
+```cs
+using Scalar.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+app.UseStatusCodePages();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.MapGet("/", () => "Hello World! ok");
+
+app.Run();
+```
+
+The AddProblemDetails call registers a IProblemDetailsWriter implementation with the service container.
+
+If the UseStatusCodePages middleware finds that service in the container, it will use it to write a ProblemDetails response json content to the response stream.
+
+If UseStatusCodePages cant find it, falls back on the generic status code content output that we saw earlier.
+
+Now that we added the service we should see the ProblemDetails output once we reload the middleware pipeline by typing `ctrl + R` again.
+
+Now click on the send request button in the .http file to send the the request again.
+
+The response should look like:
+
+```http
+HTTP/1.1 404 Not Found
+Connection: close
+Content-Type: application/problem+json
+Date: Mon, 05 Oct 2026 18:27:15 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+  "title": "Not Found",
+  "status": 404,
+  "traceId": "00-cca8ee2c4772fa89cc7e1ef11b068ef1-c2b5ea56193c42f2-00"
+}
+```
+
+As we can see now we have a json response in the body with the status and a traceId for the request.
+
+The UseStatusCodePages calls the WriteAsyncJson mehod of the IProblemDetailsWriter passing it a ProblemDetailsContext object that WriteAsyncJson serializes to the output stream.
+
+### Viewing the request in a Web browser
+
+You can navigate to <<http://localhost>:<PORT>/does/not/exist> in your browser to check the response with the ProblemDetail service and middleware installed.
 
 ```bash
 open http://localhost:5095/Scalar/v1
 ```
 
-### Sending requests using Curl
+You should see the same ProblemDetails json content displayed in the page:
 
-If you have curl utility installed you can also send a request using the curl cli.
-
-Open another terminal tab and run the curl command to see the same response:
-
-```bash
-curl -i -H "Connection: close" http://localhost:5095
+```http
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.5",
+  "title": "Not Found",
+  "status": 404,
+  "traceId": "00-cca8ee2c4772fa89cc7e1ef11b068ef1-c2b5ea56193c42f2-00"
+}
 ```
-
-Remember to change the port number according to your projects launch profile setting.
-
->Note that with Curl we need to explicitly send the Connection: close header for the Kestrel server to close the connection using. This is something that the VSCode REST Client extension takes care of automatically when we use the .http file to make the request. The HTTP Client extension automatically injects the Connection: close header into the request which is why we get the Connection: close header back in the response when using the .http file to send the request.
 
 ### Add Endpoint Tests with XUnit
 
