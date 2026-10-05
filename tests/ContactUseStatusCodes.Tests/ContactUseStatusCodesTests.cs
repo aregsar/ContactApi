@@ -7,13 +7,15 @@ namespace ContactUseStatusCodes.Tests;
 
 public class ContactUseStatusCodesTests
 {
+
+    // W3C traceparent header
+    // Format: Version-TraceId-SpanId-Flags
     private const string MockTraceParentValue = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
     private const string TraceParentRequestHeaderName = "traceparent";
 
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
     {
-        ///does/not/exist
         var factory = new WebApplicationFactory<Program>();
 
         var client = factory.CreateClient();
@@ -28,6 +30,11 @@ public class ContactUseStatusCodesTests
 
         Assert.NotNull(problem);
 
+        Assert.Equal(404, problem?.Status);
+
+        Assert.Equal("Not Found", problem?.Title);
+
+        //Assert.Null(problem?.Detail);
 
     }
 
@@ -52,5 +59,15 @@ public class ContactUseStatusCodesTests
         var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(TestContext.Current.CancellationToken);
 
         Assert.NotNull(problem);
+
+        Assert.Equal(404, problem?.Status);
+
+        Assert.Equal("Not Found", problem?.Title);
+
+        //Assert.Null(problem?.Detail);
+
+        // object? traceId = null;
+        // Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
+        // Assert.Equal(MockTraceParentValue, traceId?.ToString());
     }
 }
