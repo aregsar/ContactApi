@@ -10,6 +10,31 @@ We will add app.UseStatusCodePages() middleware for handling HTTP error response
 
 The app.UseStatusCodePages() method will add a problemdetails response body using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
 
+### Setting up the project skeleton quick start
+
+Prerequisite:
+
+```bash
+dotnet new install xunit.v3.templates
+```
+
+Add skeleton:
+
+```bash
+dotnet new sln -n ContactUseStatusCodes -o ContactUseStatusCodes
+cd ContactUseStatusCodes
+dotnet new web -o ContactUseStatusCodes
+dotnet sln ContactApi.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
+#echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
+dotnet package add Microsoft.AspNetCore.OpenApi --project ContactUseStatusCodes/ContactUseStatusCodes.csproj
+dotnet package add Scalar.AspNetCore --project ContactUseStatusCodes/ContactUseStatusCodes.csproj
+touch ContactUseStatusCodes/ContactUseStatusCodes.http
+dotnet new xunit3 -f net10.0 -o tests/ContactUseStatusCodes.Tests
+dotnet sln ContactApi.slnx add tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj
+dotnet add tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj reference ContactUseStatusCodes/ContactUseStatusCodes.csproj
+touch ContactUseStatusCodes/ContactUseStatusCodes.http
+```
+
 ### Creating the project solution
 
 Create a solution to host the project and enter the solution directory that is created:
@@ -25,7 +50,7 @@ Optionally add a .gitignore and README.md file to the solution:
 
 ```bash
 dotnet new .gitignore
-echo "# ContactStarter" >> README.md
+echo "# ContactUseStatusCodes" >> README.md
 ```
 
 ### Create the project and add to solution
