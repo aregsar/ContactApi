@@ -459,4 +459,65 @@ var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.Tra
 problemDetails.Extensions["traceId"] = traceId;
 ```
 
-> Make sure to call builder.Services.AddProblemDetails() so you context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService> does not return null;
+> Make sure to call builder.Services.AddProblemDetails() so you context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService> does not return null
+
+### Extracting the UseStatusCode pages delegate logic to a static method
+
+```bash
+touch ContactUseStatusCodes/StatusCodePagesHandler.cs
+```
+
+Copy the code inside the delegate into the StatusCodePagesHandlers file:
+
+```cs
+using Microsoft.AspNetCore.Mvc;
+
+public static class StatusCodePagesHandlers
+{
+    public static async Task WriteProblemDetailsAsync(StatusCodeContext context)
+    {
+        var problemDetailsService = context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+        var problemDetails = new ProblemDetails
+        {
+            Status = context.HttpContext.Response.StatusCode,
+            Title = "Not Found",
+            //Instance = context.HttpContext.Request.Path
+        };
+
+        // var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+        // problemDetails.Extensions["traceId"] = traceId;
+        await problemDetailsService.WriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = context.HttpContext,
+            ProblemDetails = problemDetails
+        });
+    }
+}
+```
+
+Now we can call it with a single line:
+
+```cs
+using Scalar.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.UseStatusCodePages(async context => await StatusCodePagesHandler.WriteProblemDetailsAsync(context));
+//app.UseStatusCodePages(StatusCodePagesHandler.WriteProblemDetailsAsync);
+
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.MapGet("/", () => "Hello World! ok");
+
+app.Run();
+```
