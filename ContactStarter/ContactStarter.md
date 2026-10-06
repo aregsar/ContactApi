@@ -188,23 +188,25 @@ touch tests/ContactStarter.Tests/ContactStarterTests.cs
 
 Add the root endpoint test to ContactStarterTests.cs file:
 
-> The test code is for demo testing only. For production tests we would not create a new WebApplicationFactory for each test method. We would use an IClassFixture instead.
-
 ```cs
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ContactStarter.Tests;
 
-public class ContactStarterTests
+public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
     [Fact]
     public async Task GET_RootEndpoint_Returns_200_OK_And_HelloWorld()
     {
-        var factory = new WebApplicationFactory<Program>();
 
         var client = factory.CreateClient();
 
+        //For production tests we would not factory.WithWebHostBuilder in our tests unless limited to very few tests
+        //since WithWebHostBuilder creates an entirely new WebApplicationFactory each time it is called which has
+        //performance implications.
+        //Instead we would  derive from a custom WebApplicationFactory that would be derived
+        //from WebApplicationFactory<Program> and we would set the environment using a the factory creation hook.
         // var prodClient = factory.WithWebHostBuilder(builder =>
         //     {
         //         builder.UseEnvironment("Production");

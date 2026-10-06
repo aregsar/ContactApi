@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 
 namespace ContactUseStatusCodes.Tests;
 
-public class ContactUseStatusCodesTests
+public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
 
 
@@ -19,8 +19,6 @@ public class ContactUseStatusCodesTests
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
     {
-        var factory = new WebApplicationFactory<Program>();
-
         var client = factory.CreateClient();
 
         var response = await client.GetAsync("/does/not/exist", TestContext.Current.CancellationToken);
@@ -46,9 +44,6 @@ public class ContactUseStatusCodesTests
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content_Injected_Traceparent()
     {
-        ///does/not/exist
-        var factory = new WebApplicationFactory<Program>();
-
         var client = factory.CreateClient();
 
         //these three lines are same as await client.GetAsync("/does/not/exist", TestContext.Current.CancellationToken) call
