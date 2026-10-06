@@ -42,31 +42,14 @@ dotnet sln ContactApi.slnx add ContactUseStatusCodes/ContactUseStatusCodes.cspro
 #echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
 ```
 
-### Add Open Api package and the Scalar Open Api UI Package
-
-```bash
-dotnet package add Microsoft.AspNetCore.OpenApi --project ContactUseStatusCodes/ContactUseStatusCodes.csproj
-dotnet package add Scalar.AspNetCore --project ContactUseStatusCodes/ContactUseStatusCodes.csproj
-```
-
 ### Update Minimal API Code
 
 Add the OpenApi and Scalar UI integration to the generated minimal api boilerplate in Program.cs:
 
 ```cs
-using Scalar.AspNetCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
 
 app.MapGet("/", () => "Hello World!");
 
@@ -134,20 +117,11 @@ The UseStatusCodePages will only intercept and alter the response only if all th
 So lets add the middleware to the Program.cs file:
 
 ```cs
-using Scalar.AspNetCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
-app.UseStatusCodePages();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
+app.UseStatusCodePages();
 
 app.MapGet("/", () => "Hello World!");
 
@@ -184,23 +158,15 @@ To do that we need call builder.Services.AddProblemDetails().
 Lets add the call to Program.cs:
 
 ```cs
-using Scalar.AspNetCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
+
 app.UseStatusCodePages();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
-
-app.MapGet("/", () => "Hello World! ok");
+app.MapGet("/", () => "Hello World!");
 
 app.Run();
 ```
@@ -402,11 +368,8 @@ In this case we are overriding the default middleware code that writes content t
 Lets modify Program.cs to pass in the delegate lambda to UseStatusCodePages:
 
 ```cs
-using Scalar.AspNetCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
@@ -418,10 +381,8 @@ app.UseStatusCodePages(async context =>
     {
         Status = context.HttpContext.Response.StatusCode,
         Title = "Not Found",
-        //Instance = context.HttpContext.Request.Path
     };
-    //var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
-    //problemDetails.Extensions["traceId"] = traceId;
+
     await problemDetailsService.WriteAsync(new ProblemDetailsContext
     {
         HttpContext = context.HttpContext,
@@ -429,16 +390,12 @@ app.UseStatusCodePages(async context =>
     });
 });
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
-
-app.MapGet("/", () => "Hello World! ok");
+app.MapGet("/", () => "Hello World!");
 
 app.Run();
 ```
+
+The problemDetailsService.WriteAsync method will add the trace id to the ProblemDetails object extensions dictionary, if we don't set it in our custom implementation.
 
 The code inside the delegate lambda is exactly the same as what the default UseStatusCode pages implements so we our test should still pass.
 
@@ -446,16 +403,35 @@ The code inside the delegate lambda is exactly the same as what the default UseS
 dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj
 ```
 
-The problemDetailsService.WriteAsync method will add the trace id if we dont set it in our custome implementation.
+> Make sure to call builder.Services.AddProblemDetails() so your context.HttpContext.RequestServices.GetRequiredService call does not return null. Otherwise you can add a null check to avoid a null reference exception and fall back to using a standard json writer if that strategy makes sense in your own implementation.
 
-We could have added these two lines before the call to WriteAsync and it would be the equivalent to the code that sets trace Id in WriteAsync:
+Here is an example of a custom delegate that also sets the problemDetails.Instance and problemDetails.Detail properties and also sets the traceId to  problemDetails.Extensions dictionary instead of letting  problemDetailsService.WriteAsync set it.
 
 ```cs
-var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
-problemDetails.Extensions["traceId"] = traceId;
+app.UseStatusCodePages(async context =>
+{
+    var problemDetailsService = context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+    var problemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
+    {
+        Status = context.HttpContext.Response.StatusCode,
+        Title = "Not Found",
+        Instance = context.HttpContext.Request.Path,
+        Detail= "Resource Was Not Found",
+    };
+
+    var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+    problemDetails.Extensions["traceId"] = traceId;
+
+    await problemDetailsService.WriteAsync(new ProblemDetailsContext
+    {
+        HttpContext = context.HttpContext,
+        ProblemDetails = problemDetails
+    });
+});
+
 ```
 
-> Make sure to call builder.Services.AddProblemDetails() so your context.HttpContext.RequestServices.GetRequiredService call does not return null. Otherwise you can add a null check to avoid a null reference exception and fall back to using a standard json writer if that strategy makes sense in your own implementation.
+If we were to change to this implementation of the delegate, we would also need to change our Datails and Instance property assertions to Assert.NotNull(problem?.Detail) and Assert.NotNull(problem?.Instance) in our ContactUseStatusCodesTests test methods for the tests to pass..
 
 ### Extracting the UseStatusCode pages delegate logic to a static method
 
@@ -495,35 +471,26 @@ public static class StatusCodePagesHandler
 Now we can call our custom status code pages handler with a single line:
 
 ```cs
-using Scalar.AspNetCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
 app.UseStatusCodePages(StatusCodePagesHandler.WriteProblemDetailsAsync);
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-    app.MapScalarApiReference();
-}
-
-app.MapGet("/", () => "Hello World! ok");
+app.MapGet("/", () => "Hello World!");
 
 app.Run();
 ```
 
-> If you have no need to customize the status code pages specific problem details then calling the default argument less UseStatusCodePages is recommended.
+> If you have no need to customize the status code pages specific problem details output then calling the default argument less UseStatusCodePages is recommended.
 
 There is also another way to customize problem details globally regardless of the source of the error that we will cover in another article.
 
 ## Conclusion
 
-We saw how we can use the UseStatusCodePages middleware along with the IProblemDetailsService that is added by AddProblemDetails service builder to write ProbleDetails json response in http error status code responses that would otherwise have empty body content.
+We saw how we can use the UseStatusCodePages middleware along with the IProblemDetailsService that is added by AddProblemDetails service builder to write ProblemDetails json response in http error status code responses that would otherwise have empty body content.
 
 This enables us to be consistent with the error responses that we send back to our api clients for any type of error.
 
