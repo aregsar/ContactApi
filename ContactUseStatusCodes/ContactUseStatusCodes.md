@@ -459,7 +459,7 @@ var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.Tra
 problemDetails.Extensions["traceId"] = traceId;
 ```
 
-> Make sure to call builder.Services.AddProblemDetails() so you context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService> does not return null
+> Make sure to call builder.Services.AddProblemDetails() so your context.HttpContext.RequestServices.GetRequiredService call does not return null. Otherwise you can add a null check to avoid a null reference exception and fall back to using a standard json writer if that strategy makes sense in your own implementation.
 
 ### Extracting the UseStatusCode pages delegate logic to a static method
 
@@ -496,7 +496,7 @@ public static class StatusCodePagesHandler
 }
 ```
 
-Now we can call it with a single line:
+Now we can call our custom status code pages handler with a single line:
 
 ```cs
 using Scalar.AspNetCore;
@@ -508,9 +508,7 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
-app.UseStatusCodePages(async context => await StatusCodePagesHandler.WriteProblemDetailsAsync(context));
-//app.UseStatusCodePages(StatusCodePagesHandler.WriteProblemDetailsAsync);
-
+app.UseStatusCodePages(StatusCodePagesHandler.WriteProblemDetailsAsync);
 
 if (app.Environment.IsDevelopment())
 {
@@ -522,3 +520,19 @@ app.MapGet("/", () => "Hello World! ok");
 
 app.Run();
 ```
+
+> If you have no need to customize the status code pages specific problem details then calling the default argument less UseStatusCodePages is recommended.
+
+There is also another way to customize problem details globally regardless of the source of the error that we will cover in another article.
+
+## Conclusion
+
+We saw how we can use the UseStatusCodePages middleware along with the IProblemDetailsService that is added by AddProblemDetails service builder to write ProbleDetails json response in http error status code responses that would otherwise have empty body content.
+
+This enables us to be consistent with the error responses that we send back to our api clients for any type of error.
+
+We also saw that we can also write the request trace identifier in the content, which will aid us in tracing and debugging our service requests.
+
+Along the way we got to see how the asp.net middlewar pipeline works under the hood to handle and write the error responses to the outout stream.
+
+In furure related articles we will see how global exception handling and global problem details handling works alongside UseStatusPages to handle application errors and problemdetails formatting in a uniform and comprehensive way for all our Minimal API projects.
