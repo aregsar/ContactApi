@@ -3,13 +3,13 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Hosting;// for   builder.ConfigureLogging
+using Microsoft.Extensions.Logging;
 
 namespace ContactUseStatusCodes.Tests;
 
 public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
 {
-
-
 
     // W3C traceparent header
     // Format: Version-TraceId-SpanId-Flags
@@ -19,7 +19,22 @@ public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory) 
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
     {
+        ////TestContext.Current.SendDiagnosticMessage("Hello Test");
+        //TestContext.Current.TestOutputHelper?.WriteLine("Hello cleanly from TestContext.Current!");
+
         var client = factory.CreateClient();
+
+        // factory = factory.WithWebHostBuilder(builder =>
+        // {
+        //     builder.ConfigureLogging(logging =>
+        //     {
+        //         // Clears console/debug logs and sends everything to xUnit
+        //         logging.ClearProviders();
+
+        //         logging.AddProvider(new XUnitLoggingProvider());
+
+        //     });
+        // });
 
         var response = await client.GetAsync("/does/not/exist", TestContext.Current.CancellationToken);
 
