@@ -337,6 +337,8 @@ public class ContactUseStatusCodesTests
 
         Assert.Null(problem?.Detail);
 
+        Assert.Null(problem?.Instance);
+
     }
 
     [Fact]
@@ -367,13 +369,17 @@ public class ContactUseStatusCodesTests
 
         Assert.Null(problem?.Detail);
 
-        //Test traceparent
+        Assert.Null(problem?.Instance);
+
+        //Test that the traceparent header value is used as the traceId
         object? traceId = null;
         Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
-        var actualContext = ActivityContext.Parse(traceId?.ToString(), null);
-        var expectedContext = ActivityContext.Parse(MockTraceParentValue, null);
-        Assert.Equal(expectedContext.TraceId, actualContext.TraceId);
 
+        Assert.True(ActivityContext.TryParse(traceId?.ToString(), null, out ActivityContext actualContext));
+
+        Assert.True(ActivityContext.TryParse(MockTraceParentValue, null, out ActivityContext expectedContext));
+
+        Assert.Equal(expectedContext.TraceId, actualContext.TraceId);
     }
 }
 ```
@@ -391,8 +397,66 @@ dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tes
 dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj -- -method ContactUseStatusCodes.Tests.ContactUseStatusCodesTests.GET_RootEndpoint_Returns_200_OK_And_HelloWorld
 ```
 
-### Bonus: Writing custom body reponse using a delegate
+### Bonus: Writing custom body response using a delegate
 
 We can pass in a delegate with custom code to write response content to the UseStatusCodePages when we call it.
 
 In this case we are overriding the default middleware code that writes content to the response  stream using IProblemDetailWriter with our own custom code that can also use the IProblemDetailWriter service.
+
+Lets modify Program.cs to pass in the delegate lambda to UseStatusCodePages:
+
+```cs
+using Scalar.AspNetCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddOpenApi();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.UseStatusCodePages(async context =>
+{
+    var problemDetailsService = context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService>();
+    var problemDetails = new Microsoft.AspNetCore.Mvc.ProblemDetails
+    {
+        Status = context.HttpContext.Response.StatusCode,
+        Title = "Not Found",
+        //Instance = context.HttpContext.Request.Path
+    };
+    //var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+    //problemDetails.Extensions["traceId"] = traceId;
+    await problemDetailsService.WriteAsync(new ProblemDetailsContext
+    {
+        HttpContext = context.HttpContext,
+        ProblemDetails = problemDetails
+    });
+});
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.MapGet("/", () => "Hello World! ok");
+
+app.Run();
+```
+
+The code inside the delegate lambda is exactly the same as what the default UseStatusCode pages implements so we our test should still pass.
+
+```bash
+dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj
+```
+
+The problemDetailsService.WriteAsync method will add the trace id if we dont set it in our custome implementation.
+
+We could have added these two lines before the call to WriteAsync and it would be the equivalent to the code that sets trace Id in WriteAsync:
+
+```cs
+var traceId = System.Diagnostics.Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
+problemDetails.Extensions["traceId"] = traceId;
+```
+
+> Make sure to call builder.Services.AddProblemDetails() so you context.HttpContext.RequestServices.GetRequiredService<IProblemDetailsService> does not return null;

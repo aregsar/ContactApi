@@ -39,6 +39,8 @@ public class ContactUseStatusCodesTests
 
         Assert.Null(problem?.Detail);
 
+        Assert.Null(problem?.Instance);
+
     }
 
     [Fact]
@@ -69,11 +71,17 @@ public class ContactUseStatusCodesTests
 
         Assert.Null(problem?.Detail);
 
-        //Test traceparent
+        Assert.Null(problem?.Instance);
+
+
+        //Test that the traceparent header value is used as the traceId
         object? traceId = null;
         Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
-        var actualContext = ActivityContext.Parse(traceId?.ToString(), null);
-        var expectedContext = ActivityContext.Parse(MockTraceParentValue, null);
+
+        Assert.True(ActivityContext.TryParse(traceId?.ToString(), null, out ActivityContext actualContext));
+
+        Assert.True(ActivityContext.TryParse(MockTraceParentValue, null, out ActivityContext expectedContext));
+
         Assert.Equal(expectedContext.TraceId, actualContext.TraceId);
 
     }
