@@ -470,9 +470,10 @@ touch ContactUseStatusCodes/StatusCodePagesHandler.cs
 Copy the code inside the delegate into the StatusCodePagesHandlers file:
 
 ```cs
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-public static class StatusCodePagesHandlers
+public static class StatusCodePagesHandler
 {
     public static async Task WriteProblemDetailsAsync(StatusCodeContext context)
     {
