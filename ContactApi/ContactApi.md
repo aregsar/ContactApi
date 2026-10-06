@@ -1,6 +1,6 @@
 # ContactApi
 
-## Creating a minimal Minimal API project boilerplate
+## Getting started with Minimal APIs -  Project structure, configuration and launch
 
 In this post we will create the most basic Minimal API project that has a single endpoint mapped to the root URL of the API.
 
@@ -336,13 +336,15 @@ One way we can send requests to our running Minimal API application is to use .h
 
 These .http files are files with the .http extension that contain http request scripts that can send requests to specified endpoints.
 
-VSCode has support for them using the VSCode HTTP Client extension.
-
-All major IDEs and Editors have either native support for them or support them through plugins.
+All major IDEs and Editors have either native support for them or support them through plugins or extensions.
 
 Using this support you can easily send requests by clicking on links in the document.
 
 As a bonus these .http documents can be checked into source control.
+
+Before you add the .http file make sure your editor is configured to support .http files.
+
+> Some editors like Visual Studio or Rider have built in support. VSCode editor needs the `REST Client for Visual Studio Code` extension.
 
 Add a `ContactApi.http` to the `ContactApi` project root.
 
@@ -361,8 +363,8 @@ Add the following content to the .http file:
 GET {{baseUrl}}/
 Accept: application/json
 
-### Get Non Existant URL
-GET {{baseUrl}}/doesnotexist
+### Get Non Existent URL
+GET {{baseUrl}}/does/not/exist
 Accept: application/json
 ```
 
@@ -370,7 +372,7 @@ This file has two http get requests specified.
 
 The first is a request to the root `/` URL that is mapped in Program.cs.
 
-The second is a request to a dummy `/doesnotexist` URL that is not mapped in our project.
+The second is a request to a dummy `/does/not/exist` URL that is not mapped in our project.
 
 A `@baseUrl` variable is defined that is used in both requests.
 
@@ -403,7 +405,7 @@ Transfer-Encoding: chunked
 Hello World!
 ```
 
-The response to the GET `/doesnotexist` request is:
+The response to the GET `/does/not/exist` request is:
 
 ```http
 HTTP/1.1 404 Not Found

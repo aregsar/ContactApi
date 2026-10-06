@@ -1,8 +1,8 @@
 # ContactStarter
 
-## Starter Template for all blog projects
+## Minimal Api Starter project with OpenAPI integration and XUnit test project
 
-Starter minimal api project.
+In this post we will add OpenAPI integration and  XUnit V3 test project, to the Minimal API boilerplate project ContactApi.
 
 > Uses .NET 10
 
