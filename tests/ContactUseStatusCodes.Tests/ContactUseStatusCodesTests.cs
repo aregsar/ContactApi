@@ -8,7 +8,19 @@ using Microsoft.Extensions.Logging;
 
 namespace ContactUseStatusCodes.Tests;
 
-public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+
+/*
+dotnet test --logger "console;verbosity=detailed"
+dotnet test -p:TestingPlatformCaptureOutput=false
+To make sure background thread logs originating from WebApplicationFactory can safely map back to xUnit, add this attribute to any .cs file in your test project (e.g., above your test class or in an AssemblyInfo.cs file
+using Xunit;
+// This forces xUnit v3 to intercept and bind all console outputs
+// coming from any thread in the test project
+[assembly: CaptureConsole]
+With the attribute in place, you can throw away the custom XUnitLoggingProvider and the factory.WithWebHostBuilder code entirely. You don't need them.
+Because [assembly: CaptureConsole] routes standard outputs to xUnit, you can use standard Console.WriteLine or standard app logging seamlessly
+*/
+public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory, ITestOutputHelper testOutput) : IClassFixture<WebApplicationFactory<Program>>
 {
 
     // W3C traceparent header
@@ -19,22 +31,28 @@ public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory) 
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
     {
+        //Console.WriteLine("--- Starting Test Sequence ---");
         ////TestContext.Current.SendDiagnosticMessage("Hello Test");
-        //TestContext.Current.TestOutputHelper?.WriteLine("Hello cleanly from TestContext.Current!");
+
+        //var output = TestContext.Current.TestOutputHelper;
+
+        testOutput.WriteLine("--- Starting Test Sequence ---");
+
+        factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureLogging(logging =>
+            {
+                // Clears console/debug logs and sends everything to xUnit
+                logging.ClearProviders();
+
+                logging.AddProvider(new XUnitLoggingProvider(testOutput));
+
+            });
+        });
 
         var client = factory.CreateClient();
 
-        // factory = factory.WithWebHostBuilder(builder =>
-        // {
-        //     builder.ConfigureLogging(logging =>
-        //     {
-        //         // Clears console/debug logs and sends everything to xUnit
-        //         logging.ClearProviders();
-
-        //         logging.AddProvider(new XUnitLoggingProvider());
-
-        //     });
-        // });
+        testOutput.WriteLine("--- Sending HTTP Request ---");
 
         var response = await client.GetAsync("/does/not/exist", TestContext.Current.CancellationToken);
 
