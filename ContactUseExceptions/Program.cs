@@ -4,6 +4,8 @@ builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
+app.UseExceptionHandler();
+
 app.MapGet("/", () => "Hello World!");
 
 app.MapGet("/error", () =>

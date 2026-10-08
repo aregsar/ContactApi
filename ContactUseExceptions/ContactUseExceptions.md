@@ -238,6 +238,30 @@ We can see the Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware
 
 However the output is in plain text and not in problem details json format.
 
+### Default Exception handling response in Production
+
+Now lets run the production profile:
+
+```bash
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
+```
+
+Make the same request again an we will the different output:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Content-Length: 0
+Connection: close
+Date: Mon, 17 Aug 2026 20:01:05 GMT
+Server: Kestrel
+```
+
+The response is  just a 500 status error without any content.
+
+By default since we are not running in dev mode the pipeline does not display error information that attacker might use.
+
+Since the UseDeveloperException page is not added by asp.net framework when the environment is not development, there is no error handling middlewar to display the stack trace.
+
 ### Changing the output of UseDeveloperExceptionPage to problem details
 
 UseDeveloperExceptionPage will format its response as a problem details json format if the problem details serialization service can be resolved from the service container.
@@ -328,39 +352,29 @@ The exception property is an extended problem details property in a property dic
 
 The console output still shows that the under the hood UseDeveloperExceptionPage middleware is still being invoked.
 
-### Default Exception handling response in Production
+## Adding the Problem Details with the UseExceptionHandler middleware
 
-Now lets run the production profile:
+So far we have Problem Details output in development mode but as we saw earlier there
+was error content returned except status code in production environment.
 
-```bash
+This issue also applies to other non development environments.
 
-dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
-```
+The way we add problem details content is by adding the UseExceptionHandler.
 
-Make the same request again an we will the different output:
+The  UseExceptionHandler relies on the IProblemDetailsWriter implementation that writes the problem details response.
 
-```http
-HTTP/1.1 500 Internal Server Error
-Content-Length: 0
-Connection: close
-Date: Mon, 17 Aug 2026 20:01:05 GMT
-Server: Kestrel
-```
+If we call UseExceptionHandler without calling AddProblemDetails the runtime will throw an exception when we try to run the application.
 
-The response is  just a 500 status error without any content.
+Since we already added AddProblemDetails for the UseDeveloperExceptionPage middleware we should be ready.
 
-By default since we are not running in dev mode the pipeline does not display error information that attacker might use.
-
-Since the UseDeveloperException page is not added by asp.net framework when the environment is not development, there is no error handling middlewar to display the stack trace.
-
-## Adding the UseExceptionHandler middleware
-
-lets add the UseExceptionHandler middleware to Program.cs
+So lets add the UseExceptionHandler middleware to Program.cs
 
 Program.cs:
 
 ```cs
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails();
 
 var app = builder.Build();
 
@@ -383,14 +397,93 @@ Now lets run the production profile and see what we get:
 dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
 ```
 
-Make the same request again an we will the different output:
+Make the same request again an we will now see the problem details output:
 
 ```http
 HTTP/1.1 500 Internal Server Error
-Content-Length: 0
 Connection: close
-Date: Mon, 17 Aug 2026 20:01:05 GMT
+Content-Type: application/problem+json
+Date: Thu, 08 Oct 2026 21:43:03 GMT
 Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "An error occurred while processing your request.",
+  "status": 500,
+  "traceId": "00-abc6f785c2bebf49d00f83fb66584254-49245057ad97cb59-00"
+}
 ```
 
-An exception is thrown
+## UseExceptionHandler interaction with UseDeveloperExceptionPage
+
+But what happens if we run the development profile with the UseExceptionHandler call.
+
+Lets run the development profile again and see what we get now:
+
+```bash
+
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
+```
+
+Make the same request again an we will now see the problem details output:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Connection: close
+Content-Type: application/problem+json
+Date: Thu, 08 Oct 2026 21:56:07 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "An error occurred while processing your request.",
+  "status": 500,
+  "traceId": "00-459ee45ee2f91337f348bb656350c9c7-aa8ff02e6aa8429e-00"
+}
+```
+
+Now we see the same output as production.
+
+That is because when we explicitly call UseExceptionHandler it overrides the UseDeveloperExceptionPage in the pipeline.
+
+But we still need to see our stack trace when running in development mode, so how can we do this.
+
+Well there are two approaches.
+
+### Approach 1
+
+Only call UseExceptionHandler if IsDevelopmentMode is true.
+
+This way in development mode the under the hood UseDeveloperExceptionPage will handle the exception and when not in development mode the UseExceptionHandler will be called and will override UseDeveloperExceptionPage to handle the exception.
+
+The problem with this approach is you now have two completely different pipeline paths for development vs non development.
+
+The next approach solves this problem but still allows stack trace information to be output when running in development mode.
+
+### Approch 2
+
+IN this approach we simply always call UseExceptionHandler as we have done right now regardless of what environment the app is running in.
+
+Then we write a custom global exception handler that will run instead of the default exception handling code of UseExceptionHandler.
+
+In our custom handler we can check if we are running in development mode and add the stack trace and any other info we need to the output.
+
+The benefit of this approach is there is only a single middleware code path for exception handling in our app regardless of the environment.
+
+The added benefit of this approach is that we can completely customize the output intead of relying on the default implementation.
+
+We can use the same undelying IProblemDetailsWriter implementation added by AddProblemDetail to write our problem details response.
+
+### Adding a custom handler delegate to UseExceptionHandler
+
+TODO
+
+### Adding a GlobalExceptionHandler - the modern approach
