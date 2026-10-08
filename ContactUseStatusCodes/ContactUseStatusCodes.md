@@ -39,12 +39,11 @@ Create a basic project boilerplate and add it to the solution (.slnx) file:
 ```bash
 dotnet new web -o ContactUseStatusCodes
 dotnet sln ContactApi.slnx add ContactUseStatusCodes/ContactUseStatusCodes.csproj
-#echo "# ContactUseStatusCodes" >> ContactUseStatusCodes/ContactUseStatusCodes.md
 ```
 
-### Update Minimal API Code
+The project creates a Program.cs file that contains the following Minimal API application code:
 
-Add the OpenApi and Scalar UI integration to the generated minimal api boilerplate in Program.cs:
+Program.cs:
 
 ```cs
 var builder = WebApplication.CreateBuilder(args);

@@ -2,27 +2,49 @@
 
 ## Configure Problem Details Error response for unhandled exceptions
 
-Writing Problem Details http response for unhandled execeptions.
+Writing Problem Details http response for unhandled exceptions.
 
 We will add app.UseExceptions() middleware for handling unhandled exceptions.
 
-The app.UseExceptions() method will write a problemdetails error response using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
+The app.UseExceptions() method will write a problem details error response using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
 
-### Create the project boilerplate
+### Creating the project solution
 
-Use the project boilerplate from Creating a minimal Minimal API project boilerplate post
+Create a solution to host the project and enter the solution directory that is created:
+
+```bash
+dotnet new sln -n ContactUseExceptions -o ContactUseExceptions
+cd ContactUseExceptions
+```
+
+> All following dotnet cli commands will be executed from the root directory of the solution.
+
+Optionally add a .gitignore and README.md file to the solution:
+
+```bash
+dotnet new .gitignore
+echo "# ContactUseStatusCodes" >> README.md
+```
+
+### Create the project and add to solution
+
+Create a basic project boilerplate and add it to the solution (.slnx) file:
 
 ```bash
 dotnet new web -o ContactUseExceptions
 dotnet sln ContactApi.slnx add ContactUseExceptions/ContactUseExceptions.csproj
-echo "# ContactUseExceptions" >> ContactUseExceptions/ContactUseExceptions.md
 ```
 
-> All following commands will be run from the solution root directory
+The project creates a Program.cs file that contains the following Minimal API application code:
 
-### Add Required Packages
+Program.cs:
 
-```bash
+```cs
+var builder = WebApplication.CreateBuilder(args);
 
+var app = builder.Build();
 
+app.MapGet("/", () => "Hello World!");
+
+app.Run();
 ```
