@@ -4,13 +4,13 @@
 
 ## Adding Problem Details content to contentless Error Status Code responses
 
-When running minimal apis we want to return a consistant error response in all conditions where the response return an error status code in the  400–599 range.
+When running minimal apis we want to return a consistent error response in all conditions where the response return an error status code in the  400–599 range.
 
-We can leverage the ProblemDetails RFC to return a json ProblemDetails response that all clients han handle in consistant manner.
+We can leverage the ProblemDetails RFC to return a json ProblemDetails response that all clients can handle in consistent manner.
 
-By default for certains requests the asp.net request pipeline may return error status code responses without content in the body.
+By default for certain requests the asp.net request pipeline may return error status code responses without content in the body.
 
-For these cases we want to be able to add a ProblemDetails content to the output stream to remain consistant.
+For these cases we want to be able to add a ProblemDetails content to the output stream so that all error responses have problem details content.
 
 In this article I will show you how the asp.net UseStatusCodePages middleware and the UseProblemDetails service work together to accomplish this.
 

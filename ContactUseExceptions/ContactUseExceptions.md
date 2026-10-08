@@ -1,12 +1,19 @@
 # ContactUseExceptions
 
-## Configure Problem Details Error response for unhandled exceptions
+## Returning Problem Details Error response for unhandled exceptions
 
-Writing Problem Details http response for unhandled exceptions.
+When running minimal apis we want to return a consistent  error response when our application throws an exception that is not handled.
 
-We will add app.UseExceptions() middleware for handling unhandled exceptions.
+We can leverage the ProblemDetails RFC to return a  ProblemDetails json response that all clients can handle in consistent manner.
 
-The app.UseExceptions() method will write a problem details error response using the IProblemDetailsWriter implementation registered with the service container by the app.UseProblemDetails() method
+By default in non development mode the asp.net request pipeline will return a generic error response for any unhandled exceptions.
+
+In development mode the asp.net framework under the hood adds the UseDeveloperExceptionPage middleware to the pipeline that adds additional debugging info like the stack trace.
+
+In this article I will show you how the asp.net UseExceptions middleware and the UseProblemDetails service work together to handle unhandled exceptions and return standard problem details responses.
+
+MOVE THIS:
+so that our unhandled exception go through a single unified middleware path in all environments.
 
 ### Creating the project solution
 
