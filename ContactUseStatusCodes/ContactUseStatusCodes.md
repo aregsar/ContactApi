@@ -170,7 +170,7 @@ app.MapGet("/", () => "Hello World!");
 app.Run();
 ```
 
-The AddProblemDetails call registers a IProblemDetailsWriter implementation with the service container.
+The AddProblemDetails call adds a IProblemDetailsWriter implementation to the service container.
 
 If the UseStatusCodePages middleware finds that service in the container, it will use it to write a ProblemDetails response json content to the response stream.
 
@@ -200,7 +200,7 @@ Transfer-Encoding: chunked
 
 As we can see now we have a json response in the body with the status and a traceId for the request.
 
-The UseStatusCodePages middleware calls the WriteAsyncJson merhod of the IProblemDetailsWriter passing it a ProblemDetailsContext object that WriteAsyncJson serializes to the output stream.
+The UseStatusCodePages middleware calls the WriteAsyncJson method of the IProblemDetailsWriter passing it a ProblemDetailsContext object that WriteAsyncJson serializes to the output stream.
 
 ### Viewing the request in a Web browser
 

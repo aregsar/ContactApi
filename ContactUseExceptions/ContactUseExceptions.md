@@ -218,7 +218,11 @@ User-Agent: vscode-restclient
 Accept-Encoding: gzip, deflate
 ```
 
-In console log we see :
+By default in development mode the asp.net framework under the hood adds the UseDeveloperExceptionPage middleware to the pipeline that writes debugging info like the stack trace.
+
+The response content type is:  Content-Type: text/plain; charset=utf-8
+
+In addition in the console log we see :
 
 ```bash
 fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
@@ -232,11 +236,97 @@ fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
 
 We can see the Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke call.
 
-By default in development mode the asp.net framework under the hood adds the UseDeveloperExceptionPage middleware to the pipeline that writes debugging info like the stack trace.
-
 However the output is in plain text and not in problem details json format.
 
-We will fix that shortly.
+### Changing the output of UseDeveloperExceptionPage to problem details
+
+UseDeveloperExceptionPage will format its response as a problem details json format if the problem details serialization service can be resolved from the service container.
+
+To add that dependancy we need to add the builder.Services.AddProblemDetails call to Program.cs
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.Run();
+```
+
+The AddProblemDetails call adds a IProblemDetailsWriter implementation to the service container.
+
+If the UseDeveloperExceptionPage middleware finds that service in the container, it will use it to write a ProblemDetails response json content to the response stream.
+
+If UseDeveloperExceptionPage cant find it, falls back on the generic status code content output that we saw earlier.
+
+The UseDeveloperExceptionPage middleware calls the WriteAsyncJson method of the IProblemDetailsWriter passing it a ProblemDetailsContext object that WriteAsyncJson serializes to the output stream.
+
+Lets run the development profile again:
+
+```bash
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http
+```
+
+Now click on the send request button in the .http file to send the the request again.
+
+The response should look like:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Connection: close
+Content-Type: application/problem+json
+Date: Thu, 08 Oct 2026 21:34:40 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "System.Exception",
+  "status": 500,
+  "detail": "error",
+  "exception": {
+    "details": "System.Exception: error\n   at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/ContactApi/ContactUseExceptions/Program.cs:line 11\n   at lambda_method2(Closure, Object, HttpContext)\n   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)",
+    "headers": {
+      "Accept": [
+        "application/json"
+      ],
+      "Connection": [
+        "close"
+      ],
+      "Host": [
+        "localhost:5292"
+      ],
+      "User-Agent": [
+        "vscode-restclient"
+      ],
+      "Accept-Encoding": [
+        "gzip, deflate"
+      ]
+    },
+    "path": "/error",
+    "endpoint": "HTTP: GET /error",
+    "routeValues": {}
+  },
+  "traceId": "00-080b544e6aa698f669bf3228632106ce-aaeb0e690a26da6c-00"
+}
+```
+
+As we can see now we have a problem details json response in the body with the status and a traceId for the request.
+
+The response content type is now:   Content-Type: application/problem+json
+
+The the stack trace is written to the exception property.
+The exception property is an extended problem details property in a property dictionary.
+
+The console output still shows that the under the hood UseDeveloperExceptionPage middleware is still being invoked.
 
 ### Default Exception handling response in Production
 
