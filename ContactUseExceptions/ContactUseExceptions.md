@@ -93,7 +93,7 @@ Add a HTTP GET request to the .http file:
 @baseUrl = http://localhost:5095
 
 ### Get Root URL
-GET {{baseUrl}}/does/not/exist
+GET {{baseUrl}}/error
 Accept: application/json
 ```
 
@@ -134,7 +134,7 @@ Here is wh Properties/launchSettings.json looks like currently:
 
 We can copy the `http` profile and change the name to `http.prod` and paste it below the `http` profile.
 
-Then we can change the value of the `ASPNETCORE_ENVIRONMENT` property of this new `http.prod` profile to `"Production"`.
+Then we can change the value of the `ASPNETCORE_ENVIRONMENT` property of this new `http-prod` profile to `"Production"`.
 
 The final resulting file will look like:
 
@@ -180,3 +180,127 @@ Now we can easily run the app in development and production mode by using the ap
 With this we can see how the default exception responses differ in development vs non development modes.
 
 ### Default Exception handling response in development
+
+Lets run the development profile
+
+```bash
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http
+```
+
+Make request to <http://localhost:5095/error> using the .http file or curl:
+
+```bash
+curl -i -H "Connection: close" http://localhost:5095/error
+```
+
+The response look like:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Connection: close
+Content-Type: text/plain; charset=utf-8
+Date: Mon, 17 Aug 2026 19:22:26 GMT
+Server: Kestrel
+Transfer-Encoding: chunked
+
+System.Exception: error
+   at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/ContactUseExceptions/ContactUseExceptions/Program.cs:line 13
+   at lambda_method2(Closure, Object, HttpContext)
+   at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+   at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+
+HEADERS
+=======
+Accept: application/json
+Connection: close
+Host: localhost:5095
+User-Agent: vscode-restclient
+Accept-Encoding: gzip, deflate
+```
+
+In console log we see :
+
+```bash
+fail: Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddleware[1]
+      An unhandled exception has occurred while executing the request.
+      System.Exception: error
+         at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/ContactApi/ContactUseExceptions/Program.cs:line 9
+         at lambda_method2(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke(HttpContext context)
+
+```
+
+We can see the Microsoft.AspNetCore.Diagnostics.DeveloperExceptionPageMiddlewareImpl.Invoke call.
+
+By default in development mode the asp.net framework under the hood adds the UseDeveloperExceptionPage middleware to the pipeline that writes debugging info like the stack trace.
+
+However the output is in plain text and not in problem details json format.
+
+We will fix that shortly.
+
+### Default Exception handling response in Production
+
+Now lets run the production profile:
+
+```bash
+
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
+```
+
+Make the same request again an we will the different output:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Content-Length: 0
+Connection: close
+Date: Mon, 17 Aug 2026 20:01:05 GMT
+Server: Kestrel
+```
+
+The response is  just a 500 status error without any content.
+
+By default since we are not running in dev mode the pipeline does not display error information that attacker might use.
+
+Since the UseDeveloperException page is not added by asp.net framework when the environment is not development, there is no error handling middlewar to display the stack trace.
+
+## Adding the UseExceptionHandler middleware
+
+lets add the UseExceptionHandler middleware to Program.cs
+
+Program.cs:
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.Run();
+```
+
+Now lets run the production profile and see what we get:
+
+```bash
+
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
+```
+
+Make the same request again an we will the different output:
+
+```http
+HTTP/1.1 500 Internal Server Error
+Content-Length: 0
+Connection: close
+Date: Mon, 17 Aug 2026 20:01:05 GMT
+Server: Kestrel
+```
+
+An exception is thrown
