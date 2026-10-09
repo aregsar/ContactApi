@@ -426,7 +426,7 @@ Lets run the development profile again and see what we get now:
 
 ```bash
 
-dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http
 ```
 
 Make the same request again an we will now see the problem details output:
@@ -532,8 +532,140 @@ The modern approach to add the custom global exception handler is to use the asp
 
 We will implement the modern approach which will allow us to add additional specialized exception handlers in the future should we require.
 
+The custom handler can also log exception details.
+
 So lets start by adding a file for the exception handing logic:
 
 ```bash
 touch ContactUseExceptions/GlobalExceptionHandler.cs
+```
+
+```cs
+
+//using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Diagnostics;
+
+
+
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
+    IProblemDetailsService problemDetailsService,
+    IHostEnvironment env
+    ) : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+
+        logger.LogError(exception, "An unhandled exception occurred: {Message}", exception.Message);
+
+        int statusCode = exception switch
+        {
+            // BadHttpRequestException badRequestEx => badRequestEx.StatusCode,
+            // NotImplementedException => StatusCodes.Status501NotImplemented,
+            // UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
+
+            KeyNotFoundException => StatusCodes.Status404NotFound,
+            ArgumentException => StatusCodes.Status400BadRequest,
+            _ => StatusCodes.Status500InternalServerError
+        };
+
+        httpContext.Response.StatusCode = statusCode;
+
+        ProblemDetailsContext context = new()
+        {
+            HttpContext = httpContext,
+            Exception = exception
+        };
+
+        //Use the existing context.ProblemDetails. Do not create a new ProblemDetails object.
+        context.ProblemDetails.Status = statusCode;
+        context.ProblemDetails.Title = "An error occurred while processing your request.";
+
+        if (env.IsDevelopment())
+        {
+            //override the Title in development mode
+            context.ProblemDetails.Title =  = GetTypeDisplayName(exception.GetType()),
+            context.ProblemDetails.Detail = errorContext.Exception.Message;
+            //context.ProblemDetails.Detail = "error"; //exception.Message;
+
+            ////context.ProblemDetails.Extensions ??= new Dictionary<string, object?>(StringComparer.Ordinal);
+
+            //build exception data that matches the UseDeveloperExceptionPage exception data
+            var exceptionData = new
+            {
+                details = exception.ToString(),//exception.ToString() provides most comprehensive information
+                headers = httpContext.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
+                path = exceptionFeature?.Path ?? httpContext.Request.Path.Value,
+                endpoint = endpointFeature?.Endpoint?.DisplayName ?? "Unknown",
+                routeValues = exceptionFeature?.RouteValues ?? new RouteValueDictionary()
+            };
+
+            problemDetails.Extensions.TryAdd("exception", exceptionData);
+
+            //context.ProblemDetails.Extensions.TryAdd("exception", exception.ToString());
+            //context.ProblemDetails.Extensions.TryAdd("exception", exception.Message);
+
+
+        }
+
+        return await problemDetailsService.TryWriteAsync(context);
+
+    }
+
+
+    //GetFullyQualifiedFriendlyName
+    private static string GetTypeDisplayName(Type type)
+    {
+        if (!type.IsGenericType)
+            return type.FullName ?? type.Name;
+
+        var genericArguments = type.GetGenericArguments();
+        var typeName = type.Name[..type.Name.IndexOf('`')];
+        var argumentNames = string.Join(", ", genericArguments.Select(GetTypeDisplayName));
+
+        return $"{type.Namespace}.{typeName}<{argumentNames}>";
+
+    }
+}
+```
+
+We can now register our GlobalExceptionHandler with the exception handler pipeline by simply calling builder.Services.AddExceptionHandler.
+
+Any exception handler we add must implement IExceptionHandler.
+
+The UseExceptionHandler will now retrieve the next added exception handler from the container and call that handlers TryHandleAsync method to handle the exception.
+
+Since GlobalExceptionHandler is the only handler added, there is only one handler that will be called. If the handler returns false then UseExceptionHandler will run its own default internal fallback handler which is the internal handler we have seen before.
+
+> Note that you can customize the fallback handler by providing the classic style exception handler delegate as an argument to UseExceptionHandler.
+
+If a handler returns true, UseExceptionHandler stops looking for the next registered handler and continues its normal execution path.
+
+If multiple handler are added, UseExceptionHandler goes through them starting with the first added handler one returns true of the last added handler is executed.
+
+We will see an example when we add another exception handler that will execute before the GlobalExceptionHandler.
+
+Program.cs:
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.Run();
 ```
