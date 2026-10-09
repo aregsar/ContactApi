@@ -693,8 +693,64 @@ Send a request as we did before.
 The response should look like:
 
 ```http
-dev response
+HTTP/1.1 500 Internal Server Error
+Connection: close
+Content-Type: application/problem+json
+Date: Fri, 09 Oct 2026 21:50:05 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "System.Exception",
+  "status": 500,
+  "detail": "error",
+  "exception": {
+    "details": "System.Exception: error\n   at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/ContactApi/ContactUseExceptions/Program.cs:line 15\n   at lambda_method2(Closure, Object, HttpContext)\n   at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.Invoke(HttpContext context)",
+    "headers": {
+      "Accept": [
+        "application/json"
+      ],
+      "Connection": [
+        "close"
+      ],
+      "Host": [
+        "localhost:5292"
+      ],
+      "User-Agent": [
+        "vscode-restclient"
+      ],
+      "Accept-Encoding": [
+        "gzip, deflate"
+      ]
+    },
+    "path": "/error",
+    "endpoint": "Unknown",
+    "routeValues": {}
+  },
+  "traceId": "00-3d544fb59295bb6bdd75823d25bc11ef-abc60537443714d5-00"
+}
 ```
+
+Console output is:
+
+```bash
+fail: GlobalExceptionHandler[0]
+      An unhandled exception occurred: error
+      System.Exception: error
+         at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/ContactApi/ContactUseExceptions/Program.cs:line 15
+         at lambda_method2(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.Invoke(HttpContext context)
+```
+
+which shows that our GlobalExceptionHandler is being called through the non development mode ExceptionHandlerMiddlewareImpl middleware that UseExceptionHandler installs.
+
+However we see the same stack trace in the response when running in development mode that we saw with the default exception handler of the UseDeveloperPageException middleware.
+
+Also the `title` property shows the same System.Exception type as the default exception handler of the UseDeveloperPageException middleware was showing.
 
 Now run the production profile
 
@@ -707,5 +763,36 @@ Send a request again.
 Now the response should look like:
 
 ```http
-prod response
+HTTP/1.1 500 Internal Server Error
+Connection: close
+Content-Type: application/problem+json
+Date: Fri, 09 Oct 2026 21:55:05 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "An error occurred while processing your request.",
+  "status": 500,
+  "traceId": "00-eb2aa5d41c543314ca283635a2e07092-2e73686b52e4e632-00"
+}
+```
+
+We can see that now that we are running in production mode, no stake trace is shown.
+
+Furthermore the `title` property shows the same generic error message as the default exception handler used by UseExceptionHandler.
+
+And we can see in the console output that the same handler and middleware is running in production mode:
+
+```bash
+fail: GlobalExceptionHandler[0]
+      An unhandled exception occurred: error
+      System.Exception: error
+         at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/ContactApi/ContactUseExceptions/Program.cs:line 15
+         at lambda_method2(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.Invoke(HttpContext context)
+
 ```
