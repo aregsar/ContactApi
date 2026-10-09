@@ -541,11 +541,9 @@ touch ContactUseExceptions/GlobalExceptionHandler.cs
 ```
 
 ```cs
-
 //using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Diagnostics;
-
-
+using Microsoft.AspNetCore.Http.Features;
 
 public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
     IProblemDetailsService problemDetailsService,
@@ -585,10 +583,11 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
 
         if (env.IsDevelopment())
         {
+            var exceptionFeature = httpContext.Features.Get<IExceptionHandlerPathFeature>();
+            var endpointFeature = httpContext.Features.Get<IEndpointFeature>();
             //override the Title in development mode
-            context.ProblemDetails.Title =  = GetTypeDisplayName(exception.GetType()),
-            context.ProblemDetails.Detail = errorContext.Exception.Message;
-            //context.ProblemDetails.Detail = "error"; //exception.Message;
+            context.ProblemDetails.Title = GetTypeDisplayName(exception.GetType());
+            context.ProblemDetails.Detail = exception.Message; //"error";
 
             ////context.ProblemDetails.Extensions ??= new Dictionary<string, object?>(StringComparer.Ordinal);
 
@@ -602,7 +601,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
                 routeValues = exceptionFeature?.RouteValues ?? new RouteValueDictionary()
             };
 
-            problemDetails.Extensions.TryAdd("exception", exceptionData);
+            context.ProblemDetails.Extensions.TryAdd("exception", exceptionData);
 
             //context.ProblemDetails.Extensions.TryAdd("exception", exception.ToString());
             //context.ProblemDetails.Extensions.TryAdd("exception", exception.Message);
@@ -611,11 +610,9 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
         }
 
         return await problemDetailsService.TryWriteAsync(context);
-
     }
 
-
-    //GetFullyQualifiedFriendlyName
+    //Gets Fully Qualified Friendly Name
     private static string GetTypeDisplayName(Type type)
     {
         if (!type.IsGenericType)
@@ -626,7 +623,6 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
         var argumentNames = string.Join(", ", genericArguments.Select(GetTypeDisplayName));
 
         return $"{type.Namespace}.{typeName}<{argumentNames}>";
-
     }
 }
 ```
