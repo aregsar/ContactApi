@@ -637,15 +637,7 @@ Any exception handler we add must implement IExceptionHandler.
 
 The UseExceptionHandler will now retrieve the next added exception handler from the container and call that handlers TryHandleAsync method to handle the exception.
 
-Since GlobalExceptionHandler is the only handler added, there is only one handler that will be called. If the handler returns false then UseExceptionHandler will run its own default internal fallback handler which is the internal handler we have seen before.
-
-> Note that you can customize the fallback handler by providing the classic style exception handler delegate as an argument to UseExceptionHandler.
-
-If a handler returns true, UseExceptionHandler stops looking for the next registered handler and continues its normal execution path.
-
-If multiple handler are added, UseExceptionHandler goes through them starting with the first added handler one returns true of the last added handler is executed.
-
-We will see an example when we add another exception handler that will execute before the GlobalExceptionHandler.
+Lets update Program.cs to use our global exception handler.
 
 Program.cs:
 
@@ -669,3 +661,25 @@ app.MapGet("/error", () =>
 
 app.Run();
 ```
+
+Since GlobalExceptionHandler is the only handler added, there is only one handler that will be called. If the handler returns false then UseExceptionHandler will run its own default internal fallback handler which is the internal handler we have seen before.
+
+> Note that you can customize the fallback handler by providing the classic style exception handler delegate as an argument to UseExceptionHandler.
+
+If a handler returns true, UseExceptionHandler stops looking for the next registered handler and continues its normal execution path.
+
+If multiple handler are added, UseExceptionHandler goes through them starting with the first added handler one returns true of the last added handler is executed.
+
+We will see an example when we add another exception handler that will execute before the GlobalExceptionHandler.
+
+We are now calling UseExceptionHandler for all environments.
+
+In development mode, the global handler used by UseExceptionHandler middleware will add the same exception information that the UseDevelopeExceptionPage was adding.
+
+We are also logging the exception which was not being done with the default handler used by UseExceptionHandler.
+
+You can also see that we are using the same IProblemDetailsService implementation, added by the AddProblemDetails call, to serialize the problem details data that all under the hood asp.net handlers use.
+
+This means that our handler can also trigger the global problem details pre-serialization hook that IProblemDetailsService.TryWriteAsync and IProblemDetailsService.WriteAsync methods call before they serialize the ProblemDetailsContext passed to them .
+
+The global  pre-serialization hook can inspect and modify the problem details data as well as set the status code property of the problem details object to the httpContext.Response.StatusCode value, ensuring that regardless of the source of problem detail response generation, the status code will be set.
