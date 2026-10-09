@@ -585,11 +585,10 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
         {
             var exceptionFeature = httpContext.Features.Get<IExceptionHandlerPathFeature>();
             var endpointFeature = httpContext.Features.Get<IEndpointFeature>();
+
             //override the Title in development mode
             context.ProblemDetails.Title = GetTypeDisplayName(exception.GetType());
-            context.ProblemDetails.Detail = exception.Message; //"error";
-
-            ////context.ProblemDetails.Extensions ??= new Dictionary<string, object?>(StringComparer.Ordinal);
+            context.ProblemDetails.Detail = exception.Message;
 
             //build exception data that matches the UseDeveloperExceptionPage exception data
             var exceptionData = new
@@ -602,10 +601,6 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
             };
 
             context.ProblemDetails.Extensions.TryAdd("exception", exceptionData);
-
-            //context.ProblemDetails.Extensions.TryAdd("exception", exception.ToString());
-            //context.ProblemDetails.Extensions.TryAdd("exception", exception.Message);
-
 
         }
 
