@@ -683,3 +683,33 @@ You can also see that we are using the same IProblemDetailsService implementatio
 This means that our handler can also trigger the global problem details pre-serialization hook that IProblemDetailsService.TryWriteAsync and IProblemDetailsService.WriteAsync methods call before they serialize the ProblemDetailsContext passed to them .
 
 The global  pre-serialization hook can inspect and modify the problem details data as well as set the status code property of the problem details object to the httpContext.Response.StatusCode value, ensuring that regardless of the source of problem detail response generation, the status code will be set.
+
+### Testing our custom Exception handler
+
+Lets run the development profile
+
+```bash
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http
+```
+
+Send a request as we did before.
+
+The response should look like:
+
+```http
+dev response
+```
+
+Now run the production profile
+
+```bash
+dotnet run --project ContactUseExceptions/ContactUseExceptions.csproj --launch-profile http-prod
+```
+
+Send a request again.
+
+Now the response should look like:
+
+```http
+prod response
+```
