@@ -458,7 +458,7 @@ But we still need to see our stack trace when running in development mode, so ho
 
 Well there are two approaches.
 
-### Approach 1
+### Approach 1 - Using UseExceptionHandler only in non development environment
 
 Only call UseExceptionHandler if IsDevelopmentMode is true.
 
@@ -466,24 +466,60 @@ This way in development mode the under the hood UseDeveloperExceptionPage will h
 
 The problem with this approach is you now have two completely different pipeline paths for development vs non development.
 
-The next approach solves this problem but still allows stack trace information to be output when running in development mode.
+The other approach solves this problem but still allows stack trace information to be output when running in development mode.
 
-### Approch 2
+If you opt for this approach this Program.cs change is all you need:
 
-IN this approach we simply always call UseExceptionHandler as we have done right now regardless of what environment the app is running in.
+Program.cs:
 
-Then we write a custom global exception handler that will run instead of the default exception handling code of UseExceptionHandler.
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler();
+}
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.Run();
+```
+
+With UseExceptionHandler wrapped inside an environment check we can allow the default UseDeveloperExceptionPage to handle development mode exception handling.
+
+For all other environments UseExceptionHandler middleware will handle the exceptions by overriding the UseDeveloperExceptionPage middleware.
+
+### Approach 2 - Always using UseExceptionHandler with a GlobalExceptionHandler and enriching in development mode
+
+The second approach allows all unhandled exceptions to be handled by the UseExceptionHandler middleware while preserving providing additional information when running in development mode.
+
+With this approach we simply always call UseExceptionHandler regardless of what environment the app is running in.
+
+Then we write a custom global exception handler that will be executed by UseExceptionHandler instead of its default exception handling code.
 
 In our custom handler we can check if we are running in development mode and add the stack trace and any other info we need to the output.
 
 The benefit of this approach is there is only a single middleware code path for exception handling in our app regardless of the environment.
 
-The added benefit of this approach is that we can completely customize the output intead of relying on the default implementation.
+The added benefit of this approach is that we can completely customize the output instead of relying on the default UseExceptionHandler implementation.
 
-We can use the same undelying IProblemDetailsWriter implementation added by AddProblemDetail to write our problem details response.
+In our custom implementation we can use the same underlying IProblemDetailsWriter implementation added by AddProblemDetail to write our problem details response.
 
-### Adding a custom handler delegate to UseExceptionHandler
+> Using the IProblemDetailsWriter implementation is important because it allows our implementation to use the same global Problem Details output serilalization hook that all other framework handlers that use IProblemDetailsWriter have access to.
 
-TODO
+In the sections below we will see how to implement this approach
 
 ### Adding a GlobalExceptionHandler - the modern approach
+
+```bash
+touch ContactUseExceptions/GlobalExceptionHandler.cs
+```

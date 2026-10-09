@@ -432,7 +432,7 @@ app.UseStatusCodePages(async context =>
 
 If we were to change to this implementation of the delegate, we would also need to change our Datails and Instance property assertions to Assert.NotNull(problem?.Detail) and Assert.NotNull(problem?.Instance) in our ContactUseStatusCodesTests test methods for the tests to pass..
 
-### Extracting the UseStatusCode pages delegate logic to a static method
+### Extracting the UseStatusCodePages delegate logic to a static method
 
 ```bash
 touch ContactUseStatusCodes/StatusCodePagesHandler.cs
@@ -495,8 +495,8 @@ This enables us to be consistent with the error responses that we send back to o
 
 We also saw that we can also write the request trace identifier in the content, which will aid us in tracing and debugging our service requests.
 
-Along the way we got to see how the asp.net middlewar pipeline works under the hood to handle and write the error responses to the outout stream.
+Along the way we got to see how the asp.net middleware pipeline works under the hood to handle and write the error responses to the outout stream.
 
 Finally we wrote tests to validate that our pipeline is returning the proper Problem Details response for 404 not found status errors.
 
-In furure related articles we will see how global exception handling and global problem details handling works alongside UseStatusPages to handle application errors and problemdetails formatting in a uniform and comprehensive way for all our Minimal API projects.
+In future related articles we will see how global exception handling and global problem details handling works alongside UseStatusPages to handle application errors and problem details formatting in a uniform and comprehensive way for all our Minimal API projects.
