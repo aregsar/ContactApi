@@ -452,21 +452,19 @@ Transfer-Encoding: chunked
 
 Now we see the same output as production.
 
-That is because when we explicitly call UseExceptionHandler it overrides the UseDeveloperExceptionPage in the pipeline.
+That is because when we call UseExceptionHandler it overrides the UseDeveloperExceptionPage in the pipeline.
 
-But we still need to see our stack trace when running in development mode, so how can we do this.
+But we still need to see our stack trace when running in development mode, so how can we get the stack trace during development and but in production.
 
 Well there are two approaches.
 
 ### Approach 1 - Using UseExceptionHandler only in non development environment
 
-Only call UseExceptionHandler if IsDevelopmentMode is true.
+The simplest and easiest to implement approach is to only call UseExceptionHandler if we are running in development mode.
 
-This way in development mode the under the hood UseDeveloperExceptionPage will handle the exception and when not in development mode the UseExceptionHandler will be called and will override UseDeveloperExceptionPage to handle the exception.
+This way in development mode the under the hood UseDeveloperExceptionPage will not be overridden and will handle the exception and will include the stack trace in the response.
 
-The problem with this approach is you now have two completely different pipeline paths for development vs non development.
-
-The other approach solves this problem but still allows stack trace information to be output when running in development mode.
+If we are running in non development mode we will call UseExceptionHandler which will override UseDeveloperExceptionPage and handle the exception without writing the stack trace to the response.
 
 If you opt for this approach this Program.cs change is all you need:
 
@@ -494,11 +492,17 @@ app.MapGet("/error", () =>
 app.Run();
 ```
 
-With UseExceptionHandler wrapped inside an environment check we can allow the default UseDeveloperExceptionPage to handle development mode exception handling.
+The UseExceptionHandler is now wrapped inside an environment check.
 
-For all other environments UseExceptionHandler middleware will handle the exceptions by overriding the UseDeveloperExceptionPage middleware.
+When running in any other environment other than development the UseExceptionHandler middleware will override the UseDeveloperExceptionPage middleware.
 
-### Approach 2 - Always using UseExceptionHandler with a GlobalExceptionHandler and enriching in development mode
+The problem with this approach is you now have two completely different middleware pipeline paths for development vs non development.
+
+The second approach solves this problem but still allows stack trace information to be output when running in development mode.
+
+The other benefit of the second approach is that it allows us to customize the exception response both for development and non development mode.
+
+### Approach 2 - Always using UseExceptionHandler with a GlobalExceptionHandler for all environments
 
 The second approach allows all unhandled exceptions to be handled by the UseExceptionHandler middleware while preserving providing additional information when running in development mode.
 
@@ -508,9 +512,9 @@ Then we write a custom global exception handler that will be executed by UseExce
 
 In our custom handler we can check if we are running in development mode and add the stack trace and any other info we need to the output.
 
-The benefit of this approach is there is only a single middleware code path for exception handling in our app regardless of the environment.
+The benefit of this approach is there is only a single middleware code path for exception handling in our application regardless of the environment.
 
-The added benefit of this approach is that we can completely customize the output instead of relying on the default UseExceptionHandler implementation.
+The added benefit of this approach is that we can completely customize the output instead of relying on the default UseExceptionHandler exception handling implementation.
 
 In our custom implementation we can use the same underlying IProblemDetailsWriter implementation added by AddProblemDetail to write our problem details response.
 
@@ -518,7 +522,17 @@ In our custom implementation we can use the same underlying IProblemDetailsWrite
 
 In the sections below we will see how to implement this approach
 
-### Adding a GlobalExceptionHandler - the modern approach
+### Using UseExceptionHandler with a GlobalExceptionHandler
+
+Adding a custom GlobalException handler to UseExceptionHandler middleware replaces the default exception handling implementation by the middleware.
+
+The old way to add a custom global exception handler to UseExceptionHandler was to pass in a delegate argument that encapsulated the exception handling code.
+
+The modern approach to add the custom global exception handler is to use the asp.net exception handler pipeline by adding an IExceptionHandler implementation to the service container.
+
+We will implement the modern approach which will allow us to add additional specialized exception handlers in the future should we require.
+
+So lets start by adding a file for the exception handing logic:
 
 ```bash
 touch ContactUseExceptions/GlobalExceptionHandler.cs
