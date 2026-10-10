@@ -18,10 +18,9 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
 
         int statusCode = exception switch
         {
-            // BadHttpRequestException badRequestEx => badRequestEx.StatusCode,
-            // NotImplementedException => StatusCodes.Status501NotImplemented,
-            // UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
-
+            BadHttpRequestException => StatusCodes.Status400BadRequest,
+            NotImplementedException => StatusCodes.Status501NotImplemented,
+            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
             KeyNotFoundException => StatusCodes.Status404NotFound,
             ArgumentException => StatusCodes.Status400BadRequest,
             _ => StatusCodes.Status500InternalServerError
