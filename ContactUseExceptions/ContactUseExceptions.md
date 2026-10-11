@@ -541,7 +541,6 @@ touch ContactUseExceptions/GlobalExceptionHandler.cs
 ```
 
 ```cs
-//using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http.Features;
 
@@ -790,3 +789,17 @@ fail: GlobalExceptionHandler[0]
          at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.Invoke(HttpContext context)
 
 ```
+
+## Conclusion
+
+We have seen how to add Global exception handling for un handled exceptions that returns a problem details json response.
+
+We also so how we can create a custom exception handler that we can plug into the modern .net exception handling pipeline.
+
+Finally we saw how the UseExceptionHanding application method adds exception handling middleware that calls exception handlers added to exception handling pipeline.
+
+This middleware will capture all unhandled exceptions for all environments.
+
+When running in development mode, the global exception handler that the middleware calls will add additional development mode information to the response.
+
+In another related post we will learn how to add a domain error exception handler to the exception handling pipeline that the middleware executes.
