@@ -255,8 +255,155 @@ Before we add the Validation Exception Handling code lets test the Global Except
 
 ## Adding Validation Exception classes
 
-Before creating our validation exception handler we will create the validation exception class that it should handle.
+Before creating our validation exception handler we will create the validation exception classes that it should handle.
 
-We will start by creating a base validation exception class that our domain specific validaion exceptions will derive from:
+Lets first create a CustomValidationException abstract base validation class that all our custom domain specific application exceptions will derive from.
+
+It provides basic properties that will be common to all custom application exceptions.
+
+The abstract class will allow each of the derived classes to specify their own http status code value by overriding the abstract StatusCode property.
+
+Same goes for the for the abstract StatusCodeDescription property.
+
+Create the CustomValidationException file as a base class for all our derived validation exceptions.
+
+```bash
+touch src/Api/Contax.Api/CustomValidationException.cs
+```
+
+```cs
+
+
+public abstract class CustomValidationException : Exception
+{
+    public IDictionary<string, string[]> Errors { get; }
+
+    public abstract int StatusCode { get; }
+
+    public abstract string StatusCodeDescription { get; }
+
+    protected CustomValidationException(string baseMessage, IDictionary<string, string[]> errors)
+        : base(baseMessage)
+    {
+        Errors = errors;
+    }
+}
+```
+
+Lets create a BadRequestException exception derived from CustomValidationException.
+
+It sets the StatusCode and StatusCodeDescription and can except an error message and error dictionary.
+
+Create the derived BadRequestException file:
+
+```bash
+touch src/Api/Contax.Api/BadRequestException.cs
+```
+
+```cs
+
+public class BadRequestException : CustomValidationException
+{
+    public override int StatusCode => StatusCodes.Status400BadRequest;
+
+    public override string StatusCodeDescription => "400 Bad Request";
+
+    public BadRequestException(string message, IDictionary<string, string[]> errors)
+        : base(message, errors) { }
+}
+```
+
+## Creating the ValidationExceptionHandler
+
+Now that we have out base exception class and custom BadRequestException exception class
+lets create a ValidationExceptionHandler exception handler.
+
+The ValidationExceptionHandler exception handler that will respond to any exception handlers that are derived from CustomValidationException:
+
+```bash
+touch src/Api/Contax.Api/ValidationExceptionHandler.cs
+```
+
+```cs
+//using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Diagnostics;
+
+
+
+public class ValidationExceptionHandler(ILogger<ValidationExceptionHandler> logger,
+                IProblemDetailsService problemDetailsService) : IExceptionHandler
+{
+
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        if (exception is not CustomValidationException validationException)
+        {
+            return false;
+        }
+
+        logger.LogError(validationException, "A validation exception occurred: {Message}", validationException.Message);
+
+        int statusCode = validationException.StatusCode;
+
+        httpContext.Response.StatusCode = statusCode;
+
+        var problemDetails = new HttpValidationProblemDetails(validationException.Errors)
+        {
+            Status = statusCode,
+            Title = exception.GetType().Name,
+            Detail = validationException.Message,
+            Instance = httpContext.Request.Path
+        };
+
+        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = httpContext,
+            ProblemDetails = problemDetails,
+            Exception = exception
+        });
+    }
+}
+```
+
+### Adding ValidationExceptionHandler to the pipeline
+
+```cs
+
+using Contax.Api;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails();
+
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.MapGet("/bad", () =>
+{
+     throw new BadRequestException("Invalid email.",
+                                     new Dictionary<string, string[]> {
+                                        { "email", ["email can not be empty."] }
+                                     });
+});
+
+app.Run();
+```
+
+We added builder.Services.AddExceptionHandler<ValidationExceptionHandler>() before adding GlobalExceptionHandler. The order matters since the handler are called top to bottom.
 
 ## Testing the Validation Exception Handler
