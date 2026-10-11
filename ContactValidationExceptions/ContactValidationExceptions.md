@@ -62,7 +62,7 @@ So as a starting point let us quickly add the code that we added in the GLOBAL_E
 So lets start by adding the exception handing logic file from that post:
 
 ```bash
-touch ContactUseExceptions/GlobalExceptionHandler.cs
+touch ContactValidationExceptions/GlobalExceptionHandler.cs
 ```
 
 Here is the code for the file from that post:
@@ -190,8 +190,73 @@ The IProblemDetailsWriter TryWrite method also triggers a global pre serializati
 
 So far we hve not provided this interceptor but we will learn about this interceptor in another post.
 
+## adding the .http request file
+
+Add the .http file to the project root:
+
+```bash
+touch ContactValidationExceptions/ContactValidationExceptions.http
+```
+
+Add a HTTP GET request to the .http file:
+
+```http
+@baseUrl = http://localhost:5095
+
+### Get Root URL
+GET {{baseUrl}}/error
+Accept: application/json
+```
+
+## Adding the production profile
+
+Lets update the properties/launchSettings.json with the updated file from the GLOBAL_EXCEPTION_HANDLING post.
+
+```json
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5095",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    },
+    "http-prod": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "http://localhost:5095",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Production"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "applicationUrl": "https://localhost:7192;http://localhost:5095",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
+```
+
+The http-prod was added to the default launchSettings file.
+
+## Testing the Global Exception Handler
+
+Before we add the Validation Exception Handling code lets test the Global Exception Handler that we already have in the pipeline
+
 ## Adding Validation Exception classes
 
 Before creating our validation exception handler we will create the validation exception class that it should handle.
 
 We will start by creating a base validation exception class that our domain specific validaion exceptions will derive from:
+
+## Testing the Validation Exception Handler
