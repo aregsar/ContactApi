@@ -48,3 +48,328 @@ app.MapGet("/", () => "Hello World!");
 
 app.Run();
 ```
+
+## Adding files from previous posts
+
+```bash
+touch src/Api/Contax.Api/CustomValidationException.cs
+```
+
+```cs
+public abstract class CustomValidationException : Exception
+{
+    public IDictionary<string, string[]> Errors { get; }
+
+    public abstract int StatusCode { get; }
+
+    public abstract string StatusCodeDescription { get; }
+
+    protected CustomValidationException(string baseMessage, IDictionary<string, string[]> errors)
+        : base(baseMessage)
+    {
+        Errors = errors;
+    }
+}
+```
+
+```bash
+touch src/Api/Contax.Api/BadRequestException.cs
+```
+
+```cs
+
+public class BadRequestException : CustomValidationException
+{
+    public override int StatusCode => StatusCodes.Status400BadRequest;
+
+    public override string StatusCodeDescription => "400 Bad Request";
+
+    public BadRequestException(string message, IDictionary<string, string[]> errors)
+        : base(message, errors) { }
+}
+```
+
+```bash
+touch ContactValidationExceptions/GlobalExceptionHandler.cs
+```
+
+Add the content of the GlobalExceptionHandler file from the GLOBAL_EXCEPTION_HANDLING post:
+
+```cs
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http.Features;
+
+public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
+    IProblemDetailsService problemDetailsService,
+    IHostEnvironment env
+    ) : IExceptionHandler
+{
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+
+        logger.LogError(exception, "An unhandled exception occurred: {Message}", exception.Message);
+
+        int statusCode = exception switch
+        {
+            BadHttpRequestException => StatusCodes.Status400BadRequest,
+            NotImplementedException => StatusCodes.Status501NotImplemented,
+            UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
+            KeyNotFoundException => StatusCodes.Status404NotFound,
+            ArgumentException => StatusCodes.Status400BadRequest,
+            _ => StatusCodes.Status500InternalServerError
+        };
+
+        httpContext.Response.StatusCode = statusCode;
+
+        ProblemDetailsContext context = new()
+        {
+            HttpContext = httpContext,
+            Exception = exception
+        };
+
+        //Use the existing context.ProblemDetails. Do not create a new ProblemDetails object.
+        context.ProblemDetails.Status = statusCode;
+        context.ProblemDetails.Title = "An error occurred while processing your request.";
+
+        if (env.IsDevelopment())
+        {
+            var exceptionFeature = httpContext.Features.Get<IExceptionHandlerPathFeature>();
+            var endpointFeature = httpContext.Features.Get<IEndpointFeature>();
+
+            //override the Title in development mode
+            context.ProblemDetails.Title = GetTypeDisplayName(exception.GetType());
+            context.ProblemDetails.Detail = exception.Message;
+
+            //build exception data that matches the UseDeveloperExceptionPage exception data
+            var exceptionData = new
+            {
+                details = exception.ToString(),//exception.ToString() provides most comprehensive information
+                headers = httpContext.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
+                path = exceptionFeature?.Path ?? httpContext.Request.Path.Value,
+                endpoint = endpointFeature?.Endpoint?.DisplayName ?? "Unknown",
+                routeValues = exceptionFeature?.RouteValues ?? new RouteValueDictionary()
+            };
+
+            context.ProblemDetails.Extensions.TryAdd("exception", exceptionData);
+
+        }
+
+        return await problemDetailsService.TryWriteAsync(context);
+    }
+
+    //Gets Fully Qualified Friendly Name
+    private static string GetTypeDisplayName(Type type)
+    {
+        if (!type.IsGenericType)
+            return type.FullName ?? type.Name;
+
+        var genericArguments = type.GetGenericArguments();
+        var typeName = type.Name[..type.Name.IndexOf('`')];
+        var argumentNames = string.Join(", ", genericArguments.Select(GetTypeDisplayName));
+
+        return $"{type.Namespace}.{typeName}<{argumentNames}>";
+    }
+}
+```
+
+```bash
+touch src/Api/Contax.Api/ValidationExceptionHandler.cs
+```
+
+```cs
+//using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Diagnostics;
+
+
+
+public class ValidationExceptionHandler(ILogger<ValidationExceptionHandler> logger,
+                IProblemDetailsService problemDetailsService) : IExceptionHandler
+{
+
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        if (exception is not CustomValidationException validationException)
+        {
+            return false;
+        }
+
+        logger.LogError(validationException, "A validation exception occurred: {Message}", validationException.Message);
+
+        int statusCode = validationException.StatusCode;
+
+        httpContext.Response.StatusCode = statusCode;
+
+        var problemDetails = new HttpValidationProblemDetails(validationException.Errors)
+        {
+            Status = statusCode,
+            Title = exception.GetType().Name,
+            Detail = validationException.Message,
+            Instance = httpContext.Request.Path
+        };
+
+        return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = httpContext,
+            ProblemDetails = problemDetails,
+            Exception = exception
+        });
+    }
+}
+```
+
+## Updating  Program.cs  to add exception handling
+
+Update the Program.cs with the code from the ValidationExceptionHandling and UseStatusCodePages posts.
+
+The code has an additional call to  app.UseStatusCodePages after calling app.UseExceptionHandler().
+
+The call adds the UseStatusCodePages middleware that we learned about in the UseStatusCodePages post.
+
+> Since middleware execution order matters, the app.UseStatusCodePages() is called right after app.UseExceptionHandler() to make sure that the exception handling middleware will catch any exceptions thrown from the UseStatusCodePages middleware.
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails();
+
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.UseStatusCodePages();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.MapGet("/key", () =>
+{
+    throw new KeyNotFoundException();
+});
+
+app.MapGet("/bad", () =>
+{
+     throw new BadRequestException("Invalid email.",
+                                     new Dictionary<string, string[]> {
+                                        { "email", ["email can not be empty."] }
+                                     });
+});
+
+app.Run();
+```
+
+## Adding the problem details interception code - Customizing AddProblemDetails
+
+The IProblemServiceDetails.TryWriteAsync call prior to serializing the ProblemDetailsContext object passed to it, can call a global interceptor callback that can modify the ProblemDetailsContext object prior to serialization.
+
+the builder.Services.AddProblemDetails call in Program.cs allows us to add this global interceptor callback so that problemDetailsService.TryWriteAsync can call it passing it the problem details context object before serializing it to the output.
+
+## Adding a global pre serialization Interceptor callback to AddProblemDetails
+
+Any middleware that writes ProblemDetails output, creates the ProblemDetailsContext and sets its ProblemDetails property, and passes the ProblemDetailsContext to TryWriteAsync() to serialize as json to the output.
+
+Before TryWriteAsync() serializes the ProblemDetailsContext it checks if there is a response interceptor callback method registered.
+
+If it does not find a callback which is the case at the moment, TryWriteAsync() will just go ahead and serialize the context to the response and add the Content-Type: application/problem+json header.
+
+However if WriteJsonAsync finds the callback method it first calls the callback passing the callback the ProblemDetailsContext object that is to be serialized.
+
+The callback code can make modifications to the context and after it returns to TryWriteAsync, the updated context object will be serialized to the output by TryWriteAsync.
+
+Lets demonstrate how the ProblemDetails pre serialization callback can enrich the ProblemDetails object serialized by the UseStatusCodePages and Our Exception handlers with additional data.
+
+When the exception handler middleware or the status code pages middleware call problemDetailsService.WriteAsync to write the ProblemDetails output, we have an opportunity to add a hook that can intercept the writing and customize the problem details output.
+
+We do this by providing an options lambda to the AddProblemDetails call. The lambda will be called back when problemDetailsService.WriteAsync is called and can modify the ProblemDetailsContext before it is serialized to the output stream. If we add Minimal API input validation then this lambda will also run when the ASP.NET frameworks input validation exception handler runs so that our problem details basic output format is consistant no matter how exceptions are handlerd.
+
+Lets add this now setting our format handling logic to the CustomizeProblemDetails callback of the options passed to AddProblemDetails:
+
+The updated file looks like below:
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddProblemDetails(options =>
+{
+    //options.CustomizeProblemDetails is set to the interceptor callback.
+    //The saved CustomizeProblemDetails is called by IProblemDetailsService.TryWriteAsync
+    //passing it the ProblemDetailsContext context before the context is serialized
+    options.CustomizeProblemDetails = context =>
+    {
+        //set the ProblemDetails status to the HttpContext response status prior to serialization
+        context.ProblemDetails.Status = context.HttpContext.Response.StatusCode;
+
+        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path} {DateTime.UtcNow}";
+
+        //context.ProblemDetails.Title ??= GetTitleForStatus(statusCode);
+        context.ProblemDetails.Title ??= context.HttpContext.Response.StatusCode switch
+        {
+            400 => "Bad Request",
+            401 => "Unauthorized",
+            403 => "Forbidden",
+            404 => "Not Found",
+            _ => "An unexpected error occurred while processing your request"
+        };
+
+        //Add to context.ProblemDetails.Extensions
+        IHttpActivityFeature? activityFeature = context.HttpContext.Features.Get<IHttpActivityFeature>();
+
+        //we try adding the traceId extension property in case it wasnt added by default the framwork
+        // context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
+
+        // context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
+
+        // context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.RootId ?? context.HttpContext.TraceIdentifier);
+
+        // // context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.TraceId.ToHexString() ?? context.HttpContext.TraceIdentifier);
+
+        // context.ProblemDetails.Extensions.TryAdd("httpContextTraceIdentifier", context.HttpContext.TraceIdentifier);
+    };
+});
+
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.UseStatusCodePages();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.MapGet("/key", () =>
+{
+    throw new KeyNotFoundException();
+});
+
+app.MapGet("/bad", () =>
+{
+     throw new BadRequestException("Invalid email.",
+                                     new Dictionary<string, string[]> {
+                                        { "email", ["email can not be empty."] }
+                                     });
+});
+
+app.Run();
+
+```
