@@ -385,13 +385,35 @@ Add a HTTP GET request to the .http file:
 @baseUrl = http://localhost:5095
 
 ### Get Root URL
-GET {{baseUrl}}/error
+GET {{baseUrl}}/err
+Accept: application/json
+
+### Get Root URL
+GET {{baseUrl}}/key
+Accept: application/json
+
+### Get Root URL
+GET {{baseUrl}}/bad
 Accept: application/json
 ```
 
 ## Testing the Global Exception Handler
 
 Before we add the Validation Exception Handling code lets test the Global Exception Handler that we already added to the pipeline.
+
+```bash
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http
+```
+
+Send request to err endpoint
+
+Send request to key endpoint
+
+Send request to bad endpoint
+
+```bash
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http-prod
+```
 
 ### Adding ValidationExceptionHandler to the pipeline
 
@@ -439,11 +461,15 @@ app.MapGet("/bad", () =>
 app.Run();
 ```
 
-We added builder.Services.AddExceptionHandler&lt;ValidationExceptionHandler&gt; before adding GlobalExceptionHandler.
+There is only a single line change.
 
-The order matters since the handler are called top to bottom.
+We added the call to builder.Services.AddExceptionHandler&lt;ValidationExceptionHandler&gt; just before the builder.Services.AddExceptionHandler&lt;GlobalExceptionHandler&gt; call.
 
-Note that ValidationExceptionHandler is added before the GlobalExceptionHandler, the UseExceptionHandler middleware will iterate through added exception handlers starting from the first one added to the last one added.
+The order matters since the handler are called by the UseExceptionHandler middleware from top to bottom.
+
+So ValidationExceptionHandler is added before the GlobalExceptionHandler since it needs to decide if it should handle the exception before it deferes the handling to the GlobalExceptionHandler.
+
+The exception handling middleware add by the call to UseExceptionHandler, will iterate through the added exception handlers starting from the one added first to the one added last.
 
 So our GlobalExceptionHandler needs to be added last as a catch all if non of the handlers added before it handle the exception.
 
@@ -458,11 +484,10 @@ If the exception thrown is of type ValidationExceptionHandler then it will handl
 Lets run the app:
 
 ```bash
-dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj
-
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http
 ```
 
-Then look at the response when we send the request to the /error endpoint:
+Then look at the response when we send the request to the /err endpoint:
 
 ```bash
 HTTP/1.1 500 Internal Server Error
@@ -514,8 +539,7 @@ Accept: application/json
 Lets run the app again:
 
 ```bash
-
-dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http
 ```
 
 This time lets look at the response when we send the request to the /bad endpoint:
@@ -561,17 +585,25 @@ fail: Contax.Api.GlobalExceptionHandler[0]
          at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
 ```
 
-Now that we have our exception handling all setup.
+```bash
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http-prod
+```
 
-We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
+Send request to error endpoint
 
-The interceptor also allows us to set the http context status to the problem details object status property to make sure they are in sync. So even if we you forget to set it in the exception handler there is one global location that it can be set.
+Send request to key endpoint
+
+Send request to bad endpoint
 
 ## Conclusion
 
 TODO
 
 In next post create:
+
+We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
+
+The interceptor also allows us to set the http context status to the problem details object status property to make sure they are in sync. So even if we you forget to set it in the exception handler there is one global location that it can be set.
 
 ```cs
 
