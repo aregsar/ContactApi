@@ -323,10 +323,11 @@ Again the handler uses the IProblemDetailsService implementation to seialize the
 
 ## Updating Program.cs with exception handling logic
 
-Before we add out validation exception handler code we will update our Program.cs file with exception handling logic that we introduced in the GLOBAL_EXCEPTION_HANDLING post.
+Before we add out validation exception handler to the exception handling pipeline, we will update our Program.cs file with global  exception handling logic that we introduced in the GLOBAL_EXCEPTION_HANDLING post.
 
-This way we can test the code
-Update Program.cs with the following code.
+In addition we will add two additional endpoint mappings that throw exceptions.  One that throws .NET frameworks KeyNotFoundException and one that throws our custom BadRequestException.
+
+So lets update Program.cs with the following code.
 
 ```cs
 var builder = WebApplication.CreateBuilder(args);
@@ -349,6 +350,14 @@ app.MapGet("/error", () =>
 app.MapGet("/key", () =>
 {
     throw new KeyNotFoundException();
+});
+
+app.MapGet("/bad", () =>
+{
+     throw new BadRequestException("Invalid email.",
+                                     new Dictionary<string, string[]> {
+                                        { "email", ["email can not be empty."] }
+                                     });
 });
 
 app.Run();
@@ -382,9 +391,13 @@ Accept: application/json
 
 ## Testing the Global Exception Handler
 
-Before we add the Validation Exception Handling code lets test the Global Exception Handler that we already have in the pipeline
+Before we add the Validation Exception Handling code lets test the Global Exception Handler that we already added to the pipeline.
 
 ### Adding ValidationExceptionHandler to the pipeline
+
+Now that we saw the exception handling response without the ValidationExceptionHandler in the pipeline lets see what happens when we add it to the pipleline.
+
+Update the Program.cs code to add ValidationExceptionHandler:
 
 ```cs
 
@@ -409,6 +422,11 @@ app.MapGet("/error", () =>
     throw new Exception("error");
 });
 
+app.MapGet("/key", () =>
+{
+    throw new KeyNotFoundException();
+});
+
 app.MapGet("/bad", () =>
 {
      throw new BadRequestException("Invalid email.",
@@ -417,9 +435,138 @@ app.MapGet("/bad", () =>
                                      });
 });
 
+
 app.Run();
 ```
 
-We added builder.Services.AddExceptionHandler<ValidationExceptionHandler>() before adding GlobalExceptionHandler. The order matters since the handler are called top to bottom.
+We added builder.Services.AddExceptionHandler&lt;ValidationExceptionHandler&gt; before adding GlobalExceptionHandler.
+
+The order matters since the handler are called top to bottom.
+
+Note that ValidationExceptionHandler is added before the GlobalExceptionHandler, the UseExceptionHandler middleware will iterate through added exception handlers starting from the first one added to the last one added.
+
+So our GlobalExceptionHandler needs to be added last as a catch all if non of the handlers added before it handle the exception.
+
+If the exception thrown is not of type derived from CustomValidationException then the CustomValidationException.TryHandleAsync will return early with the false result which will cause the UseExceptionHandler middle ware to call the next handler in the pipeline which in our case is the GlobalExceptionHandler.
+
+If the exception thrown is of type ValidationExceptionHandler then it will handle the exception and return true which will cause the UseExceptionHandler middleware to stop going through the remaining handlers in the pipeline and return.
+
+> Note that you are free to add more exception handlers to the exception handler pipeline depending on the needs of your application. You are also free to only add a single GlobalExceptionHandler for all your application exceptions. There are no limits on the number of handlers in the pipeline.
 
 ## Testing the Validation Exception Handler
+
+Lets run the app:
+
+```bash
+dotnet run --project src/Api/Contax.Api/Contax.Api.csproj
+
+```
+
+Then look at the response when we send the request to the /error endpoint:
+
+```bash
+HTTP/1.1 500 Internal Server Error
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:17:58 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+  "title": "An application error occurred.",
+  "status": 500,
+  "detail": "error",
+  "error": "System.Exception: error\n   at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 21\n   at lambda_method2(Closure, Object, HttpContext)\n   at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)\n   at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)",
+  "traceId": "00-4d93064166315e8bf946fd79627bff32-2f392e659c3e2632-00"
+}
+```
+
+The ValidationExceptionHandler TryHandleAsync method checks that the exception is of type CustomValidationException and since it isn't return false so the UseExceptionHandler middleware calls the GlobalExceptionHandler which handles the error.
+
+And in the console logger message we can see the messageAn unhandled exception occurred: error from the GlobalExceptionHandler TryHandleAsync method.
+
+```bash
+fail: Contax.Api.ValidationExceptionHandler[0]
+      An unhandled exception occurred: error
+      System.Exception: error
+         at Program.<>c.<<Main>$>b__0_1() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 21
+         at lambda_method2(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+
+```
+
+Now lets add a request to the /bad endpoint in the src/Api/Contax.Api/Contax.Api.http file:
+
+file ContactValidationExceptions.http:
+
+```http
+
+### Get Error URL
+GET {{baseUrl}}/bad
+Accept: application/json
+```
+
+Lets run the app again:
+
+```bash
+
+dotnet run --project src/Api/Contax.Api/Contax.Api.csproj
+```
+
+This time lets look at the response when we send the request to the /bad endpoint:
+
+```bash
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+This time we can see the ValidationExceptionHandler TryHandleAsync method checks that the exception is of type CustomValidationException and since it is it handles the error. Since it handlers the exception, the GlobalExceptionHandler is not called by the UseExceptionHandler middleware.
+
+And in the console logger message we can see the messageA validation exception occurred: Invalid email. from the ValidationExceptionHandler TryHandleAsync method.
+
+```bash
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
+Now that we have our exception handling all setup.
+
+We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
+
+The interceptor also allows us to set the http context status to the problem details object status property to make sure they are in sync. So even if we you forget to set it in the exception handler there is one global location that it can be set.
+
+## Conclusion
+
+TODO
