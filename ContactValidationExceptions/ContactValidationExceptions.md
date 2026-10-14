@@ -451,14 +451,14 @@ If the exception thrown is not of type derived from CustomValidationException th
 
 If the exception thrown is of type ValidationExceptionHandler then it will handle the exception and return true which will cause the UseExceptionHandler middleware to stop going through the remaining handlers in the pipeline and return.
 
-> Note that you are free to add more exception handlers to the exception handler pipeline depending on the needs of your application. You are also free to only add a single GlobalExceptionHandler for all your application exceptions. There are no limits on the number of handlers in the pipeline.
+> Note that you are free to add more exception handlers to the exception handler pipeline depending on the needs of your application. You are also free to only add a single GlobalExceptionHandler for all your application exceptions.
 
 ## Testing the Validation Exception Handler
 
 Lets run the app:
 
 ```bash
-dotnet run --project src/Api/Contax.Api/Contax.Api.csproj
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj
 
 ```
 
@@ -515,7 +515,7 @@ Lets run the app again:
 
 ```bash
 
-dotnet run --project src/Api/Contax.Api/Contax.Api.csproj
+dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj
 ```
 
 This time lets look at the response when we send the request to the /bad endpoint:
@@ -570,3 +570,46 @@ The interceptor also allows us to set the http context status to the problem det
 ## Conclusion
 
 TODO
+
+In next post create:
+
+```cs
+
+using Microsoft.AspNetCore.Http.Features;
+
+public class GlobalProblemDetailsInterceptor
+{
+    public static void PreSerializationHook(ProblemDetailsContext context)
+    {
+        //set the ProblemDetails status to the HttpContext response status prior to serialization
+        context.ProblemDetails.Status = context.HttpContext.Response.StatusCode;
+
+        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path} {DateTime.UtcNow}";
+
+        //context.ProblemDetails.Title ??= GetTitleForStatus(statusCode);
+        context.ProblemDetails.Title ??= context.HttpContext.Response.StatusCode switch
+        {
+            400 => "Bad Request",
+            401 => "Unauthorized",
+            403 => "Forbidden",
+            404 => "Not Found",
+            _ => "An unexpected error occurred while processing your request"
+        };
+
+        //Add to context.ProblemDetails.Extensions
+        IHttpActivityFeature? activityFeature = context.HttpContext.Features.Get<IHttpActivityFeature>();
+
+        //we try adding the traceId extension property in case it wasnt added by default the framwork
+        context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
+
+        context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
+
+        context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.RootId ?? context.HttpContext.TraceIdentifier);
+
+        // context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.TraceId.ToHexString() ?? context.HttpContext.TraceIdentifier);
+
+        context.ProblemDetails.Extensions.TryAdd("httpContextTraceIdentifier", context.HttpContext.TraceIdentifier);
+
+    }
+}
+```
