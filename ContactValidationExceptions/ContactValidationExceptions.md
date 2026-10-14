@@ -401,19 +401,41 @@ Accept: application/json
 
 Before we add the Validation Exception Handling code lets test the Global Exception Handler that we already added to the pipeline.
 
+Lets run the app using the development mode profile:
+
 ```bash
 dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http
 ```
 
-Send request to err endpoint
+Lets send request to /error endpoint
 
-Send request to key endpoint
+Then look at the response:
 
-Send request to bad endpoint
+Lets send request to /key endpoint
+
+Then look at the response:
+
+Lets send request to /bad endpoint
+
+Then look at the response:
+
+Lets run the app using the production mode profile:
 
 ```bash
 dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http-prod
 ```
+
+Lets send request to /error endpoint
+
+Then look at the response:
+
+Lets send request to /key endpoint
+
+Then look at the response:
+
+Lets send request to /bad endpoint
+
+Then look at the response:
 
 ### Adding ValidationExceptionHandler to the pipeline
 
@@ -481,13 +503,15 @@ If the exception thrown is of type ValidationExceptionHandler then it will handl
 
 ## Testing the Validation Exception Handler
 
-Lets run the app:
+Lets run the app using the development mode profile:
 
 ```bash
 dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http
 ```
 
-Then look at the response when we send the request to the /err endpoint:
+Lets send the request to the /error endpoint:
+
+Then look at the response:
 
 ```bash
 HTTP/1.1 500 Internal Server Error
@@ -525,24 +549,9 @@ fail: Contax.Api.ValidationExceptionHandler[0]
 
 ```
 
-Now lets add a request to the /bad endpoint in the src/Api/Contax.Api/Contax.Api.http file:
+Lets send the request to the /bad endpoint:
 
-file ContactValidationExceptions.http:
-
-```http
-
-### Get Error URL
-GET {{baseUrl}}/bad
-Accept: application/json
-```
-
-Lets run the app again:
-
-```bash
-dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http
-```
-
-This time lets look at the response when we send the request to the /bad endpoint:
+Then look at the response:
 
 ```bash
 HTTP/1.1 400 Bad Request
@@ -585,15 +594,29 @@ fail: Contax.Api.GlobalExceptionHandler[0]
          at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
 ```
 
+Lets send the request to the /key endpoint:
+
+Then look at the response:
+
+Lets send requests to all the endpoints again but this time running in production mode
+
+Lets run the application using the production profile:
+
 ```bash
 dotnet run --project ContactValidationExceptions/ContactValidationExceptions.csproj --launch-profile http-prod
 ```
 
-Send request to error endpoint
+Lets send request to error endpoint
 
-Send request to key endpoint
+Then look at the response:
 
-Send request to bad endpoint
+Lets send request to bad endpoint
+
+Then look at the response:
+
+Lets send request to key endpoint
+
+Then look at the response:
 
 ## Conclusion
 
