@@ -154,7 +154,6 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
             };
 
             context.ProblemDetails.Extensions.TryAdd("exception", exceptionData);
-
         }
 
         return await problemDetailsService.TryWriteAsync(context);
@@ -310,11 +309,12 @@ builder.Services.AddProblemDetails(options =>
     options.CustomizeProblemDetails = context =>
     {
         //set the ProblemDetails status to the HttpContext response status prior to serialization
+        //some error handlers might have missed setting context.ProblemDetails.Status so
+        //setting here ensures that it will always be set regardless of how the error is handled
+        //as long as all error handlers use IProblemDetailsService.TryWriteAsync or
+        //IProblemDetailsService.WriteAsync to serialize the problem details context
         context.ProblemDetails.Status = context.HttpContext.Response.StatusCode;
 
-        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path} {DateTime.UtcNow}";
-
-        //context.ProblemDetails.Title ??= GetTitleForStatus(statusCode);
         context.ProblemDetails.Title ??= context.HttpContext.Response.StatusCode switch
         {
             400 => "Bad Request",
@@ -324,21 +324,51 @@ builder.Services.AddProblemDetails(options =>
             _ => "An unexpected error occurred while processing your request"
         };
 
+        //instance is only added in the global interceptor. not in any error handlers
+        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path} {DateTime.UtcNow}";
+
         //Add to context.ProblemDetails.Extensions
         IHttpActivityFeature? activityFeature = context.HttpContext.Features.Get<IHttpActivityFeature>();
 
-        //we try adding the traceId extension property in case it wasnt added by default the framwork
-        // context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
+        context.ProblemDetails.Extensions.TryAdd("timestamp", DateTimeOffset.UtcNow);
 
-        // context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
+        //we try adding the traceId extension property in case it wasn't added by default by the framework
+        context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
 
-        // context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.RootId ?? context.HttpContext.TraceIdentifier);
+        context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
 
-        // // context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.TraceId.ToHexString() ?? context.HttpContext.TraceIdentifier);
+        context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.RootId ?? context.HttpContext.TraceIdentifier);
 
-        // context.ProblemDetails.Extensions.TryAdd("httpContextTraceIdentifier", context.HttpContext.TraceIdentifier);
+        context.ProblemDetails.Extensions.TryAdd("traceIdentifier", context.HttpContext.TraceIdentifier);
+
     };
 });
+
+context.ProblemDetails.Title = "An error occurred while processing your request.";
+
+if (env.IsDevelopment())
+{
+    var exceptionFeature = httpContext.Features.Get<IExceptionHandlerPathFeature>();
+    var endpointFeature = httpContext.Features.Get<IEndpointFeature>();
+
+    //override the Title in development mode
+    context.ProblemDetails.Title = GetTypeDisplayName(exception.GetType());
+    context.ProblemDetails.Detail = exception.Message;
+
+    //build exception data that matches the UseDeveloperExceptionPage exception data
+    var exceptionData = new
+    {
+        details = exception.ToString(),//exception.ToString() provides most comprehensive information
+        headers = httpContext.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
+        path = exceptionFeature?.Path ?? httpContext.Request.Path.Value,
+        endpoint = endpointFeature?.Endpoint?.DisplayName ?? "Unknown",
+        routeValues = exceptionFeature?.RouteValues ?? new RouteValueDictionary()
+    };
+
+    context.ProblemDetails.Extensions.TryAdd("exception", exceptionData);
+}
+
+
 
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 
@@ -372,4 +402,52 @@ app.MapGet("/bad", () =>
 
 app.Run();
 
+```
+
+## Add a static interceptor file (New Section)
+
+We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
+
+The interceptor also allows us to set the http context status to the problem details object status property to make sure they are in sync. So even if we you forget to set it in the exception handler there is one global location that it can be set.
+
+```cs
+
+using Microsoft.AspNetCore.Http.Features;
+
+public class GlobalProblemDetailsInterceptor
+{
+    public static void PreSerializationHook(ProblemDetailsContext context)
+    {
+        //set the ProblemDetails status to the HttpContext response status prior to serialization
+        context.ProblemDetails.Status = context.HttpContext.Response.StatusCode;
+
+        context.ProblemDetails.Title ??= context.HttpContext.Response.StatusCode switch
+        {
+            400 => "Bad Request",
+            401 => "Unauthorized",
+            403 => "Forbidden",
+            404 => "Not Found",
+            _ => "An unexpected error occurred while processing your request"
+        };
+
+        //instance is only added in the global interceptor. not in any error handlers
+        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path} {DateTime.UtcNow}";
+
+
+        //Add to context.ProblemDetails.Extensions
+        IHttpActivityFeature? activityFeature = context.HttpContext.Features.Get<IHttpActivityFeature>();
+
+        context.ProblemDetails.Extensions.TryAdd("timestamp", DateTimeOffset.UtcNow);
+
+        //we try adding the traceId extension property in case it wasn't added by default by the framework
+        context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
+
+        context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
+
+        context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.RootId ?? context.HttpContext.TraceIdentifier);
+
+        context.ProblemDetails.Extensions.TryAdd("traceIdentifier", context.HttpContext.TraceIdentifier);
+
+    }
+}
 ```

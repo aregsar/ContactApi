@@ -302,9 +302,8 @@ public class ValidationExceptionHandler(ILogger<ValidationExceptionHandler> logg
         var problemDetails = new HttpValidationProblemDetails(validationException.Errors)
         {
             Status = statusCode,
-            Title = exception.GetType().Name,
+            Title = GetTypeDisplayName(validationException.GetType()),
             Detail = validationException.Message,
-            Instance = httpContext.Request.Path
         };
 
         return await problemDetailsService.TryWriteAsync(new ProblemDetailsContext
@@ -313,6 +312,19 @@ public class ValidationExceptionHandler(ILogger<ValidationExceptionHandler> logg
             ProblemDetails = problemDetails,
             Exception = exception
         });
+    }
+
+     //Gets Fully Qualified Friendly Name
+    private static string GetTypeDisplayName(Type type)
+    {
+        if (!type.IsGenericType)
+            return type.FullName ?? type.Name;
+
+        var genericArguments = type.GetGenericArguments();
+        var typeName = type.Name[..type.Name.IndexOf('`')];
+        var argumentNames = string.Join(", ", genericArguments.Select(GetTypeDisplayName));
+
+        return $"{type.Namespace}.{typeName}<{argumentNames}>";
     }
 }
 ```
@@ -621,50 +633,3 @@ Then look at the response:
 ## Conclusion
 
 TODO
-
-In next post create:
-
-We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
-
-The interceptor also allows us to set the http context status to the problem details object status property to make sure they are in sync. So even if we you forget to set it in the exception handler there is one global location that it can be set.
-
-```cs
-
-using Microsoft.AspNetCore.Http.Features;
-
-public class GlobalProblemDetailsInterceptor
-{
-    public static void PreSerializationHook(ProblemDetailsContext context)
-    {
-        //set the ProblemDetails status to the HttpContext response status prior to serialization
-        context.ProblemDetails.Status = context.HttpContext.Response.StatusCode;
-
-        context.ProblemDetails.Instance = $"{context.HttpContext.Request.Method} {context.HttpContext.Request.Path} {DateTime.UtcNow}";
-
-        //context.ProblemDetails.Title ??= GetTitleForStatus(statusCode);
-        context.ProblemDetails.Title ??= context.HttpContext.Response.StatusCode switch
-        {
-            400 => "Bad Request",
-            401 => "Unauthorized",
-            403 => "Forbidden",
-            404 => "Not Found",
-            _ => "An unexpected error occurred while processing your request"
-        };
-
-        //Add to context.ProblemDetails.Extensions
-        IHttpActivityFeature? activityFeature = context.HttpContext.Features.Get<IHttpActivityFeature>();
-
-        //we try adding the traceId extension property in case it wasnt added by default the framwork
-        context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
-
-        context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
-
-        context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.RootId ?? context.HttpContext.TraceIdentifier);
-
-        // context.ProblemDetails.Extensions.TryAdd("rootId", activityFeature?.Activity?.TraceId.ToHexString() ?? context.HttpContext.TraceIdentifier);
-
-        context.ProblemDetails.Extensions.TryAdd("httpContextTraceIdentifier", context.HttpContext.TraceIdentifier);
-
-    }
-}
-```

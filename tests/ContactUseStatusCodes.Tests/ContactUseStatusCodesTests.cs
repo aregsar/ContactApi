@@ -27,6 +27,8 @@ public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory, 
     // Format: Version-TraceId-SpanId-Flags
     private const string MockTraceParentValue = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
     private const string TraceParentRequestHeaderName = "traceparent";
+    private const string TraceIDKey = "traceId";
+
 
     [Fact]
     public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
@@ -72,6 +74,14 @@ public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory, 
 
         Assert.Null(problem?.Instance);
 
+
+        //Test that the traceId field exists
+        //TODO: Verify this test code
+        // object? traceId = null;
+        // Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
+        // //test that the traceId is parsable
+        // Assert.True(ActivityContext.TryParse(traceId?.ToString(), null, out ActivityContext actualContext));
+
     }
 
     [Fact]
@@ -104,7 +114,7 @@ public class ContactUseStatusCodesTests(WebApplicationFactory<Program> factory, 
 
         //Test that the traceparent header value is used as the traceId
         object? traceId = null;
-        Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
+        Assert.True(problem?.Extensions.TryGetValue(TraceIDKey, out traceId));
 
         Assert.True(ActivityContext.TryParse(traceId?.ToString(), null, out ActivityContext actualContext));
 
