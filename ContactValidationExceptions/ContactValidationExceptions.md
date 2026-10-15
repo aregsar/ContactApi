@@ -423,13 +423,136 @@ Lets send request to /error endpoint
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 Lets send request to /key endpoint
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 Lets send request to /bad endpoint
 
 Then look at the response:
+
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
 
 Lets run the app using the production mode profile:
 
@@ -441,13 +564,136 @@ Lets send request to /error endpoint
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 Lets send request to /key endpoint
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 Lets send request to /bad endpoint
 
 Then look at the response:
+
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
 
 ### Adding ValidationExceptionHandler to the pipeline
 
@@ -456,9 +702,6 @@ Now that we saw the exception handling response without the ValidationExceptionH
 Update the Program.cs code to add ValidationExceptionHandler:
 
 ```cs
-
-using Contax.Api;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
@@ -610,6 +853,47 @@ Lets send the request to the /key endpoint:
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 Lets send requests to all the endpoints again but this time running in production mode
 
 Lets run the application using the production profile:
@@ -622,14 +906,161 @@ Lets send request to error endpoint
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 Lets send request to bad endpoint
 
 Then look at the response:
+
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
 
 Lets send request to key endpoint
 
 Then look at the response:
 
+```bash
+NEED TO CHANGE THIS
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Type: application/problem+json
+Date: Sat, 29 Aug 2026 17:22:43 GMT
+Server: Kestrel
+Cache-Control: no-cache,no-store
+Expires: -1
+Pragma: no-cache
+Transfer-Encoding: chunked
+
+{
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "BadRequestException",
+  "status": 400,
+  "detail": "Invalid email.",
+  "instance": "/bad",
+  "errors": {
+    "email": [
+      "email can not be empty."
+    ]
+  },
+  "traceId": "00-db7c1b180fa7d8a10d0e5de094e0c794-dc18e1db2f9cd41c-00"
+}
+
+```
+
+Console output:
+
+```bash
+NEED TO CHANGE THIS
+fail: Contax.Api.GlobalExceptionHandler[0]
+      A validation exception occurred: Invalid email.
+      Contax.Api.BadRequestException: Invalid email.
+         at Program.<>c.<<Main>$>b__0_2() in /Users/aregsarkissian/RiderProjects/Contax/src/Api/Contax.Api/Program.cs:line 26
+         at lambda_method3(Closure, Object, HttpContext)
+         at Microsoft.AspNetCore.Diagnostics.StatusCodePagesMiddleware.Invoke(HttpContext context)
+         at Microsoft.AspNetCore.Diagnostics.ExceptionHandlerMiddlewareImpl.<Invoke>g__Awaited|10_0(ExceptionHandlerMiddlewareImpl middleware, HttpContext context, Task task)
+```
+
 ## Conclusion
 
-TODO
+In this post we learned that we can add exception handler classes to the exception handling pipeline in addition to the global exception handler that was added to the pipeline in the previous post.
+
+The exception are all added to the service container using the same IExceptionHandler interface.
+
+The service container stores them as a collection of handlers with the same order as they are added to the container.
+
+The exception handling middleware that is installed by calling the UseExceptionHanding() method processes  exceptions that are not handled by our application code.
+
+The middleware iterates through the exception handlers in the container calling their IExceptionHandler.TryHandleAsync method, in the same order as they were added to the container.
+
+The first exception handler TryHandleAsync() method that returns true ends the processing and returns from the middleware.
+
+If non of the handlers added before the global exception handler return true then the global exception handler that is the last handler added to the container will handle the exception.
+
+If the global exception handler returns false then the default built in exception handling code of the middleware will handle the exception.
+
+In our example, we saw that the ValidationExceptionHandler will return false if the exception type of the exception passed to it by the middleware does not derive from the CustomValidationException class that we defined.
+
+In that case the GlobalExceptionHandler code will be invoked by the middleware to handle the exception.
+
+However if the exception is derived from CustomValidationException then the ValidationExceptionHandler will try to handle it.
+
+If it can handle the exception it will return true and the middleware will return without calling the next exception handler which in this case is the GlobalExceptionHandler.
+
+In the next post in the series we will learn how to add a global problem details serialization interceptor to customize the problem details object that is being serialized before it gets serialized.
