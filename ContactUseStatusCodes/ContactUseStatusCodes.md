@@ -367,7 +367,7 @@ dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tes
 dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj -- -method ContactUseStatusCodes.Tests.ContactUseStatusCodesTests.GET_RootEndpoint_Returns_200_OK_And_HelloWorld
 ```
 
-### Bonus: Writing custom body response using a delegate
+### Optional: Writing custom body response using a delegate
 
 We can pass in a delegate with custom code to write response content to the UseStatusCodePages when we call it.
 

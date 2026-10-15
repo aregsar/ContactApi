@@ -1041,9 +1041,9 @@ fail: Contax.Api.GlobalExceptionHandler[0]
 
 In this post we learned that we can add exception handler classes to the exception handling pipeline in addition to the global exception handler that was added to the pipeline in the previous post.
 
-The exception are all added to the service container using the same IExceptionHandler interface.
+The exception are all added to the service container by builder.Services.AddExceptionHandler.
 
-The service container stores them as a collection of handlers with the same order as they are added to the container.
+Since all the exception handlers implement IExceptionHandler interface, the service container stores them as a collection of handlers in the same order as they are added using AddExceptionHandler.
 
 The exception handling middleware that is installed by calling the UseExceptionHanding() method processes  exceptions that are not handled by our application code.
 

@@ -49,7 +49,9 @@ app.MapGet("/", () => "Hello World!");
 app.Run();
 ```
 
-## Adding files from previous posts
+## Copying the files from the GlobalExceptionHandling and ValidationExceptionHandling posts
+
+In order to focus on the additional code for the global problem details interception, we will copy over the exception handling code that we already have from the two previous posts.
 
 ```bash
 touch ContactProblemDetails/CustomValidationException.cs
@@ -518,6 +520,162 @@ The callback updates the context.ProblemDetails.
 
 The modified context.ProblemDetails will be serialized to the http response output stream once the callback returns back to problemDetailsService.TryWriteAsync.
 
+## Returning ProblemDetails directly from minimal api endpoints
+
+When you execute TypedResults.Problem(), it constructs a ProblemHttpResult. When ASP.NET Core writes this result to the HTTP response pipeline, it checks the Dependency Injection container for an IProblemDetailsService.If it finds one (because you called builder.Services.AddProblemDetails()), it uses that service to write the response. If it does not find one, it falls back to manually serializing the basic object.
+
+Because TypedResults.Problem() uses IProblemDetailsService directly, you can intercept and modify its output globally by configuring ProblemDetailsOptions in your Program.cs
+
+So the AddProblemDetails global callback also gets called when we return a TypedResults.Problem() from our endpoints. TypedResults.ValidationProblem() method returns an instance of Microsoft.AspNetCore.Http.HttpResults.ValidationProblem class. This class has a property named ProblemDetails that is a HttpValidationProblemDetails class instance. TypedResults.Problem() method returns an instance of Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult class. This class has a ProblemDetails property that is a ProblemDetails class instance.
+
 ## Testing The problem details response
 
-TODO: Add .http and xunit tests
+### Test using .http file
+
+TODO
+
+### Add Endpoint Tests with XUnit
+
+Install the xunit v3 templates:
+
+> The command need to run only when you need to install or update the templates.
+
+```bash
+dotnet new install xunit.v3.templates
+```
+
+After installing the templates you can create a test project using the template and add it to the solution:
+
+```bash
+dotnet new xunit3 -f net10.0 -o tests/ContactProblemDetails.Tests
+dotnet sln ContactApi.slnx add tests/ContactProblemDetails.Tests/ContactProblemDetails.Tests.csproj
+```
+
+Reference the ContactUseStatusCodes.csproj project from the ContactUseStatusCodes.Tests.csproj:
+
+```bash
+dotnet add tests/ContactProblemDetails.Tests/ContactProblemDetails.Tests.csproj reference ContactProblemDetails/ContactProblemDetails.csproj
+```
+
+The command adds a reference to the ContactProblemDetails.Tests.csproj file.
+
+Add the Microsoft.AspNetCore.Mvc.Testing package to the test project:
+
+```bash
+dotnet package add Microsoft.AspNetCore.Mvc.Testing --project tests/ContactProblemDetails.Tests/ContactProblemDetails.Tests.csproj
+```
+
+Add a test file to the test project:
+
+```bash
+touch tests/ContactProblemDetails.Tests/ContactProblemDetailsTests.cs
+```
+
+Add the root endpoint test to ContactUseStatusCodesTests.cs file:
+
+> The test code is for demo testing only. For production tests we would not create a new WebApplicationFactory for each test method. We would use an IClassFixture instead.
+
+```cs
+using System.Diagnostics;
+using System.Net;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Testing;
+
+namespace ContactProblemDetails.Tests;
+
+public class ContactProblemDetailsTests(WebApplicationFactory<Program> factory) : IClassFixture<WebApplicationFactory<Program>>
+{
+
+    // W3C traceparent header
+    // Format: Version-TraceId-SpanId-Flags
+    private const string MockTraceParentValue = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
+
+    private const string TraceParentRequestHeaderName = "traceparent";
+
+    private const string TraceIDKey = "traceId";
+
+    [Fact]
+    public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content()
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync("/does/not/exist", TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(404, problem?.Status);
+
+        Assert.Equal("Not Found", problem?.Title);
+
+        Assert.Null(problem?.Detail);
+
+        Assert.Null(problem?.Instance);
+
+
+        //Test that the traceId field exists
+        object? traceId = null;
+        Assert.True(problem?.Extensions.TryGetValue("traceId", out traceId));
+        //test that the traceId is parsable
+        Assert.True(ActivityContext.TryParse(traceId?.ToString(), null, out ActivityContext actualContext));
+
+    }
+
+    [Fact]
+    public async Task GET_Does_Not_Exist_Endpoint_Returns_404_Not_Found_Status_And_ProblemDetails_Content_Injected_Traceparent()
+    {
+        var client = factory.CreateClient();
+
+        //these three lines are same as await client.GetAsync("/does/not/exist", TestContext.Current.CancellationToken) call
+        //but with the added header
+        var request = new HttpRequestMessage(HttpMethod.Get, "/does/not/exist");
+        request.Headers.Add(TraceParentRequestHeaderName, MockTraceParentValue);
+        var response = await client.SendAsync(request, TestContext.Current.CancellationToken);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+
+        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>(TestContext.Current.CancellationToken);
+
+        Assert.NotNull(problem);
+
+        Assert.Equal(404, problem?.Status);
+
+        Assert.Equal("Not Found", problem?.Title);
+
+        Assert.Null(problem?.Detail);
+
+        Assert.Null(problem?.Instance);
+
+        //Test that the traceparent header value is used as the traceId
+        object? traceId = null;
+        Assert.True(problem?.Extensions.TryGetValue(TraceIDKey, out traceId));
+
+        Assert.True(ActivityContext.TryParse(traceId?.ToString(), null, out ActivityContext actualContext));
+
+        Assert.True(ActivityContext.TryParse(MockTraceParentValue, null, out ActivityContext expectedContext));
+
+        Assert.Equal(expectedContext.TraceId, actualContext.TraceId);
+    }
+}
+```
+
+Run the tests:
+
+```bash
+# run all tests  in the test project
+dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj
+
+# run all tests in a ContactStarterTests class in the test project
+dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj -- -class ContactUseStatusCodes.Tests.ContactUseStatusCodesTests
+
+# run the GET_RootEndpoint_Returns_200_OK_And_HelloWorld class method test in the project
+dotnet run --project tests/ContactUseStatusCodes.Tests/ContactUseStatusCodes.Tests.csproj -- -method ContactUseStatusCodes.Tests.ContactUseStatusCodesTests.GET_RootEndpoint_Returns_200_OK_And_HelloWorld
+```
