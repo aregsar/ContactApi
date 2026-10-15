@@ -52,7 +52,7 @@ app.Run();
 ## Adding files from previous posts
 
 ```bash
-touch src/Api/Contax.Api/CustomValidationException.cs
+touch ContactProblemDetails/CustomValidationException.cs
 ```
 
 ```cs
@@ -73,7 +73,7 @@ public abstract class CustomValidationException : Exception
 ```
 
 ```bash
-touch src/Api/Contax.Api/BadRequestException.cs
+touch ContactProblemDetails/BadRequestException.cs
 ```
 
 ```cs
@@ -90,7 +90,7 @@ public class BadRequestException : CustomValidationException
 ```
 
 ```bash
-touch ContactValidationExceptions/GlobalExceptionHandler.cs
+touch ContactProblemDetails/GlobalExceptionHandler.cs
 ```
 
 Add the content of the GlobalExceptionHandler file from the GLOBAL_EXCEPTION_HANDLING post:
@@ -175,7 +175,7 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger,
 ```
 
 ```bash
-touch src/Api/Contax.Api/ValidationExceptionHandler.cs
+touch ContactProblemDetails/ValidationExceptionHandler.cs
 ```
 
 ```cs
@@ -344,32 +344,6 @@ builder.Services.AddProblemDetails(options =>
     };
 });
 
-context.ProblemDetails.Title = "An error occurred while processing your request.";
-
-if (env.IsDevelopment())
-{
-    var exceptionFeature = httpContext.Features.Get<IExceptionHandlerPathFeature>();
-    var endpointFeature = httpContext.Features.Get<IEndpointFeature>();
-
-    //override the Title in development mode
-    context.ProblemDetails.Title = GetTypeDisplayName(exception.GetType());
-    context.ProblemDetails.Detail = exception.Message;
-
-    //build exception data that matches the UseDeveloperExceptionPage exception data
-    var exceptionData = new
-    {
-        details = exception.ToString(),//exception.ToString() provides most comprehensive information
-        headers = httpContext.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToArray()),
-        path = exceptionFeature?.Path ?? httpContext.Request.Path.Value,
-        endpoint = endpointFeature?.Endpoint?.DisplayName ?? "Unknown",
-        routeValues = exceptionFeature?.RouteValues ?? new RouteValueDictionary()
-    };
-
-    context.ProblemDetails.Extensions.TryAdd("exception", exceptionData);
-}
-
-
-
 builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -404,14 +378,27 @@ app.Run();
 
 ```
 
+With this update we are passing a problem detail options delegate to the AddProblemDetails method and inside the body we assign to options.CustomizeProblemDetails a problem details context delegate.
+
+In the problem details context delegate the first thing we do is set the context.ProblemDetails.Status to context.HttpContext.Response.StatusCode to make sure problem details has the final http context status just before it is serialized to the response.
+
+Then we add various additional useful properties to the problem details object if not already set.
+
+> In the interceptor we only update problem details related properties only. Any exception data is added by the exception handlers.
+
 ## Add a static interceptor file (New Section)
 
 We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
 
 The interceptor also allows us to set the http context status to the problem details object status property to make sure they are in sync. So even if we you forget to set it in the exception handler there is one global location that it can be set.
 
-```cs
+```bash
+touch ContactProblemDetails/GlobalProblemDetailsInterceptor.cs
+```
 
+Add the code to GlobalProblemDetailsInterceptor:
+
+```cs
 using Microsoft.AspNetCore.Http.Features;
 
 public class GlobalProblemDetailsInterceptor
