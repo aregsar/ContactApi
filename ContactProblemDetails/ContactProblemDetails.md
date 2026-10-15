@@ -298,6 +298,8 @@ Lets add this now setting our format handling logic to the CustomizeProblemDetai
 
 The updated file looks like below:
 
+Program.cs
+
 ```cs
 var builder = WebApplication.CreateBuilder(args);
 
@@ -386,7 +388,27 @@ Then we add various additional useful properties to the problem details object i
 
 > In the interceptor we only update problem details related properties only. Any exception data is added by the exception handlers.
 
-## Add a static interceptor file (New Section)
+Here we used the global interceptor hook to make final modifications to the context.ProblemDetails object that will be serialized as json output.
+
+First thing we do in here is to make sure that the status set on the HttpContext is set to the ProblemDetails status.
+
+This ensures that the status between them is in sync even if some custom exception handler changed the HttpContext status but failed to update the ProblemDetails it wrote to the output stream using IProblemDetailsService.
+
+Then we set a title based on the status code.
+
+Finally we add some basic tracing data to the problem details output that we can use to track and debug production errors.
+
+The context.ProblemDetails.Extensions["traceId"] is normally added by default by the asp.net framework when  problemDetailsService.TryWriteAsync is called to in error handlers, however we try adding it here again just to make sure it is available.
+
+If it already exists the TryAdd will not replace it.
+
+Then we add a number of other identifiers that may be helpfull in debugging production requests.
+
+One thing to note is that we use context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity?.Id to access the current activity id instead of using Microsoft.AspNetCore.Diagnostics.Activity.Current?.Id. This is done to avoid threading and async flow issues from causing Activity.Current to be null. In some scrnarions where HttpContext is not available the Microsoft.AspNetCore.Diagnostics.Activity.Current AsyncLocal property can be used.
+
+> Note that we did not add or modify any exception handling data. This is good practice since we dont want exception data from different exception handlers that we might add to the application to be changed. The exception handlers should be responsable for setting exception data.
+
+## Wrapping AddProblemDetails configuration in a static method
 
 We need to setup the Global problem details serialization interceptor that intercepts calls to problemDetailsService.TryWriteAsync(problemdetails) and customizes the problem details context object by adding common data in one global location before it gets serialized.
 
@@ -396,14 +418,20 @@ The interceptor also allows us to set the http context status to the problem det
 touch ContactProblemDetails/GlobalProblemDetailsInterceptor.cs
 ```
 
-Add the code to GlobalProblemDetailsInterceptor:
+Now we need to first add a GlobalProblemDetailsInterceptor class with a static PreSerializationHook callback method to the file.
+
+Then move the inline callback code set to the options.CustomizeProblemDetails in the AddProblemDetails call in Program.cs into this static method.
+
+Then move the inline callback code set to the options.CustomizeProblemDetails from the AddProblemDetails call into this static method.
+
+Here is the code in GlobalProblemDetailsInterceptor.cs
 
 ```cs
 using Microsoft.AspNetCore.Http.Features;
 
 public class GlobalProblemDetailsInterceptor
 {
-    public static void PreSerializationHook(ProblemDetailsContext context)
+    public static void PreSerializationCallback(ProblemDetailsContext context)
     {
         //set the ProblemDetails status to the HttpContext response status prior to serialization
         context.ProblemDetails.Status = context.HttpContext.Response.StatusCode;
@@ -438,3 +466,52 @@ public class GlobalProblemDetailsInterceptor
     }
 }
 ```
+
+Now we can update the call to AddProblemDetails in Program.cs to use the GlobalProblemDetailsInterceptor.PreSerializationCallback:
+
+Program.cs
+
+```cs
+var builder = WebApplication.CreateBuilder(args);
+
+//CustomizeProblemDetails is set to the interceptor callback
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = GlobalProblemDetailsInterceptor.PreSerializationCallback);
+
+builder.Services.AddExceptionHandler<ValidationExceptionHandler>();
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+var app = builder.Build();
+
+app.UseExceptionHandler();
+
+app.UseStatusCodePages();
+
+app.MapGet("/", () => "Hello World!");
+
+app.MapGet("/error", () =>
+{
+    throw new Exception("error");
+});
+
+app.MapGet("/key", () =>
+{
+    throw new KeyNotFoundException();
+});
+
+app.MapGet("/bad", () =>
+{
+     throw new BadRequestException("Invalid email.",
+                                     new Dictionary<string, string[]> {
+                                        { "email", ["email can not be empty."] }
+                                     });
+});
+
+app.Run();
+```
+
+problemDetailsService.TryWriteAsync calls this callback.
+
+The callback updates the context.ProblemDetails.
+
+The modified context.ProblemDetails will be serialized to the http response output stream once the callback returns back to problemDetailsService.TryWriteAsync.
