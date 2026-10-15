@@ -226,12 +226,6 @@ public class ValidationExceptionHandler(ILogger<ValidationExceptionHandler> logg
 
 Update the Program.cs with the code from the ValidationExceptionHandling and UseStatusCodePages posts.
 
-The code has an additional call to  app.UseStatusCodePages after calling app.UseExceptionHandler().
-
-The call adds the UseStatusCodePages middleware that we learned about in the UseStatusCodePages post.
-
-> Since middleware execution order matters, the app.UseStatusCodePages() is called right after app.UseExceptionHandler() to make sure that the exception handling middleware will catch any exceptions thrown from the UseStatusCodePages middleware.
-
 ```cs
 var builder = WebApplication.CreateBuilder(args);
 
@@ -269,6 +263,14 @@ app.MapGet("/bad", () =>
 
 app.Run();
 ```
+
+We can see that there is a call to app.UseStatusCodePages after calling app.UseExceptionHandler().
+
+The call adds the UseStatusCodePages middleware that we learned about in the UseStatusCodePages post.
+
+That middleware also adds problem details json to the response for error status code responses that have no content.
+
+> Since middleware execution order matters, the app.UseStatusCodePages() is called right after app.UseExceptionHandler() to make sure that the exception handling middleware will catch any exceptions thrown from the UseStatusCodePages middleware.
 
 ## Adding the problem details interception code - Customizing AddProblemDetails
 
@@ -334,7 +336,7 @@ builder.Services.AddProblemDetails(options =>
 
         context.ProblemDetails.Extensions.TryAdd("timestamp", DateTimeOffset.UtcNow);
 
-        //we try adding the traceId extension property in case it wasn't added by default by the framework
+        //we try adding the traceId extension property in case it wasn't added by the framework
         context.ProblemDetails.Extensions.TryAdd("traceId", activityFeature?.Activity?.TraceId.ToString() ?? context.HttpContext.TraceIdentifier);
 
         context.ProblemDetails.Extensions.TryAdd("activityId", activityFeature?.Activity?.Id ?? context.HttpContext.TraceIdentifier);
@@ -406,7 +408,7 @@ Then we add a number of other identifiers that may be helpfull in debugging prod
 
 One thing to note is that we use context.HttpContext.Features.Get<IHttpActivityFeature>()?.Activity?.Id to access the current activity id instead of using Microsoft.AspNetCore.Diagnostics.Activity.Current?.Id. This is done to avoid threading and async flow issues from causing Activity.Current to be null. In some scrnarions where HttpContext is not available the Microsoft.AspNetCore.Diagnostics.Activity.Current AsyncLocal property can be used.
 
-> Note that we did not add or modify any exception handling data. This is good practice since we dont want exception data from different exception handlers that we might add to the application to be changed. The exception handlers should be responsable for setting exception data.
+> Note that we did not add or modify any exception handling data. This is good practice since we dont want exception data from different exception handlers that we might add to the application to be changed. The exception handlers should be responsible for setting exception data.
 
 ## Wrapping AddProblemDetails configuration in a static method
 
