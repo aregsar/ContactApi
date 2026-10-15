@@ -515,3 +515,7 @@ problemDetailsService.TryWriteAsync calls this callback.
 The callback updates the context.ProblemDetails.
 
 The modified context.ProblemDetails will be serialized to the http response output stream once the callback returns back to problemDetailsService.TryWriteAsync.
+
+## Testing The problem details response
+
+TODO: Add .http and xunit tests
